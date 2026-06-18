@@ -1,13 +1,24 @@
 # Deploy the static PokéTrack site to GitHub Pages.
 #
-# This workflow publishes the repository root (index.html, css/, js/) directly,
-# with no build step. It runs on every push to `main` and can also be triggered
-# manually from the Actions tab.
+# This workflow publishes the repository root (index.html, css/, js/, firebase.js)
+# directly, with no build step. It runs on every push to `main` and can also be
+# triggered manually from the Actions tab.
 #
 # Setup steps (one-time, in repo settings):
 #   1. Settings → Pages → "Build and deployment" → Source: GitHub Actions
-#   2. Push to `main` (or run this workflow manually) — the site will be
+#   2. Settings → Secrets and variables → Actions → add the 6 Firebase secrets
+#      listed below (FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID,
+#      FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID).
+#   3. Push to `main` (or run this workflow manually) — the site will be
 #      published at https://<owner>.github.io/<repo>/.
+#
+# About the Firebase secrets:
+#   The Firebase Web SDK config values are NOT real secrets (Google explicitly
+#   says they're safe to embed in client-side code). They're stored as GitHub
+#   Secrets here only so the repo source stays clean and so values can be
+#   rotated without a code change. Restrict access in the Firebase console
+#   (Auth → Authorized domains, Firestore security rules) — that's what
+#   actually protects your project.
 
 name: Deploy to GitHub Pages
 
@@ -35,6 +46,61 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # Replace the __FIREBASE_*__ placeholders in firebase.js with the real
+      # values from GitHub Secrets. If any secret is missing, the placeholder
+      # is left in place and firebase.js will detect it at runtime and disable
+      # cloud sync gracefully (the app still works as a local-only tracker).
+      - name: Inject Firebase config
+        env:
+          FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
+        run: |
+          set -euo pipefail
+
+          if [ ! -f firebase.js ]; then
+            echo "::warning::firebase.js not found at repo root; skipping injection."
+            exit 0
+          fi
+
+          # Warn (don't fail) if any secret is empty — keeps the deploy green
+          # for forks that haven't set up Firebase yet.
+          missing=0
+          for var in FIREBASE_API_KEY FIREBASE_AUTH_DOMAIN FIREBASE_PROJECT_ID \
+                     FIREBASE_STORAGE_BUCKET FIREBASE_MESSAGING_SENDER_ID FIREBASE_APP_ID; do
+            if [ -z "${!var:-}" ]; then
+              echo "::warning::Secret $var is not set — placeholder will be left in firebase.js."
+              missing=$((missing+1))
+            fi
+          done
+          if [ "$missing" -gt 0 ]; then
+            echo "::warning::$missing Firebase secret(s) missing; cloud sync will be disabled on the deployed site."
+          fi
+
+          # Use python for the substitution so secret values containing slashes,
+          # ampersands, or other regex-special characters don't break sed.
+          python3 - <<'PY'
+          import os, pathlib
+          path = pathlib.Path("firebase.js")
+          src = path.read_text(encoding="utf-8")
+          mapping = {
+              "__FIREBASE_API_KEY__":             os.environ.get("FIREBASE_API_KEY", ""),
+              "__FIREBASE_AUTH_DOMAIN__":         os.environ.get("FIREBASE_AUTH_DOMAIN", ""),
+              "__FIREBASE_PROJECT_ID__":          os.environ.get("FIREBASE_PROJECT_ID", ""),
+              "__FIREBASE_STORAGE_BUCKET__":      os.environ.get("FIREBASE_STORAGE_BUCKET", ""),
+              "__FIREBASE_MESSAGING_SENDER_ID__": os.environ.get("FIREBASE_MESSAGING_SENDER_ID", ""),
+              "__FIREBASE_APP_ID__":              os.environ.get("FIREBASE_APP_ID", ""),
+          }
+          for placeholder, value in mapping.items():
+              if value:
+                  src = src.replace(placeholder, value)
+          path.write_text(src, encoding="utf-8")
+          print("Firebase config injection complete.")
+          PY
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
