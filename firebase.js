@@ -111,6 +111,15 @@ window.wipeCloudCollection = async function () {
   }
 };
 
+/**
+ * Lightweight sign-in probe used by js/app.js when deciding whether to offer
+ * the "also wipe cloud?" confirm on reset. Returns true only if Firebase is
+ * configured AND the user is currently signed in.
+ */
+window.isSignedInToCloud = function () {
+  return Boolean(currentUser && db);
+};
+
 // ---------- Internals ----------
 
 async function loadFromCloud(uid) {
