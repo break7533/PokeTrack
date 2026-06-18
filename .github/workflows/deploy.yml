@@ -1,0 +1,58 @@
+# Deploy the static PokéTrack site to GitHub Pages.
+#
+# This workflow publishes the repository root (index.html, css/, js/) directly,
+# with no build step. It runs on every push to `main` and can also be triggered
+# manually from the Actions tab.
+#
+# Setup steps (one-time, in repo settings):
+#   1. Settings → Pages → "Build and deployment" → Source: GitHub Actions
+#   2. Push to `main` (or run this workflow manually) — the site will be
+#      published at https://<owner>.github.io/<repo>/.
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow this workflow to publish to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy at a time; cancel any in-progress runs that are
+# superseded by a newer one, but let an already-running deploy finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Package site
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload site artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # The whole repo root is the static site
+          path: .
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
