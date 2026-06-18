@@ -94,6 +94,14 @@ button {
   box-shadow: var(--shadow-md);
 }
 
+/* Top row holds the title on the left and the auth button on the right */
+.site-header__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
 .site-title {
   margin: 0;
   font-size: clamp(1.75rem, 4vw, 2.5rem);
@@ -121,6 +129,81 @@ button {
   margin: 0.25rem 0 1.5rem;
   color: rgba(255, 255, 255, 0.85);
   font-size: 1rem;
+}
+
+/* ---------- Auth button (Sign in / signed-in avatar) ---------- */
+
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.8rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1;
+  transition: background var(--transition-fast), border-color var(--transition-fast),
+    transform var(--transition-fast);
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.auth-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.auth-btn:active {
+  transform: translateY(1px);
+}
+
+.auth-btn:focus-visible {
+  outline: 2px solid var(--color-yellow);
+  outline-offset: 2px;
+}
+
+.auth-btn svg {
+  display: block;
+}
+
+.auth-btn__label {
+  display: inline-block;
+}
+
+/* Signed-in state: collapses to a circular avatar / initial badge */
+.auth-btn--signed-in {
+  padding: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  justify-content: center;
+  background: var(--color-yellow);
+  border-color: var(--color-yellow-dark);
+  color: var(--color-blue-dark);
+  overflow: hidden;
+}
+
+.auth-btn--signed-in:hover {
+  background: #ffd633;
+  border-color: var(--color-yellow-dark);
+}
+
+.auth-btn--signed-in img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.auth-btn__initial {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--color-blue-dark);
+  text-transform: uppercase;
+  line-height: 1;
 }
 
 /* Overall stats */
@@ -547,5 +630,10 @@ main {
   }
   .header-actions .btn {
     flex: 1 1 auto;
+  }
+
+  /* On very small screens, drop the "Sign in" word and keep just the icon */
+  .auth-btn:not(.auth-btn--signed-in) .auth-btn__label {
+    display: none;
   }
 }
