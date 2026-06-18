@@ -7,6 +7,8 @@
  *   - Recompute per-set, per-era, and overall progress on every change
  *   - Toggle visibility of per-set secret rows and entire era sections
  *   - Validate input (non-negative integers, capped at the set's total)
+ *   - Optionally sync to Firestore via the window.* hooks defined by
+ *     firebase.js (no-op if firebase.js failed to init or isn't loaded)
  */
 (function () {
   "use strict";
@@ -25,6 +27,11 @@
   let collapsedEras = loadStringSet(ERA_COLLAPSED_KEY);
   /** @type {Set<string>} */
   let openSecrets = loadStringSet(SET_SECRET_OPEN_KEY);
+
+  // When firebase.js pushes a merged cloud snapshot back into us, we don't
+  // want each per-set value-write to re-trigger a cloud sync. This flag lets
+  // us suppress that round-trip.
+  let applyingCloudSnapshot = false;
 
   // ---------- Persistence ----------
 
@@ -87,6 +94,11 @@
     if (!collection[setId]) collection[setId] = { base: 0, secret: 0 };
     collection[setId][kind] = value;
     saveCollection();
+    // Cloud sync hook — no-op if firebase.js isn't loaded or user is signed out.
+    // Skipped while we're applying a cloud snapshot to avoid an echo write.
+    if (!applyingCloudSnapshot && typeof window.syncCollectionToCloud === "function") {
+      window.syncCollectionToCloud(collection);
+    }
   }
 
   function percent(collected, total) {
@@ -305,6 +317,30 @@
     updateOverallProgress();
   }
 
+  /**
+   * Refresh the value attribute of every visible input from current state.
+   * Used after a cloud snapshot is applied so the user sees the merged numbers
+   * without us having to fully re-render (which would lose focus on inputs).
+   */
+  function refreshAllInputs() {
+    document.querySelectorAll(".set").forEach((node) => {
+      const setId = node.dataset.setId;
+      const set = findSet(setId);
+      if (!set) return;
+      const collected = getCollected(setId);
+      const baseInput = node.querySelector(".set__input--base");
+      if (baseInput && document.activeElement !== baseInput) {
+        baseInput.value = String(collected.base);
+      }
+      if (set.secret > 0) {
+        const secretInput = node.querySelector(".set__input--secret");
+        if (secretInput && document.activeElement !== secretInput) {
+          secretInput.value = String(collected.secret);
+        }
+      }
+    });
+  }
+
   function findSet(setId) {
     for (const era of POKEMON_TCG_ERAS) {
       const found = era.sets.find((s) => s.id === setId);
@@ -354,20 +390,74 @@
     }
 
     if (resetBtn) {
-      resetBtn.addEventListener("click", () => {
+      resetBtn.addEventListener("click", async () => {
         const confirmed = window.confirm(
           "Reset all collection data? This will clear every saved count and cannot be undone."
         );
         if (!confirmed) return;
+
+        // If signed in, also offer to wipe the cloud copy. Default: yes,
+        // because otherwise the next page-load would re-pull the cloud data
+        // and "un-reset" everything.
+        let alsoWipeCloud = false;
+        if (typeof window.wipeCloudCollection === "function" &&
+            typeof window.isSignedInToCloud === "function" &&
+            window.isSignedInToCloud()) {
+          alsoWipeCloud = window.confirm(
+            "You're signed in. Also delete the cloud copy of your collection?\n\n" +
+            "OK = delete cloud data too (recommended)\n" +
+            "Cancel = keep cloud data (it will sync back on next sign-in)"
+          );
+        }
+
         collection = {};
         saveCollection();
-        // Also clear UI-only prefs so the user gets a clean slate
         openSecrets.clear();
         saveStringSet(SET_SECRET_OPEN_KEY, openSecrets);
         render();
+
+        if (alsoWipeCloud) {
+          try { await window.wipeCloudCollection(); } catch (_) { /* surfaced in firebase.js */ }
+        }
       });
     }
   }
+
+  // ---------- Cloud-sync bridge (called by firebase.js) ----------
+
+  /** Read-only accessor for the in-memory collection. */
+  window.getLocalCollection = function () {
+    // Return a shallow copy so callers can't mutate our state by accident
+    const out = {};
+    Object.keys(collection).forEach((k) => {
+      const v = collection[k] || {};
+      out[k] = { base: v.base | 0, secret: v.secret | 0 };
+    });
+    return out;
+  };
+
+  /**
+   * Replace local state with the merged cloud+local snapshot from firebase.js,
+   * persist to localStorage, and refresh the UI without a full re-render.
+   *
+   * @param {Record<string, { base:number, secret:number }>} merged
+   */
+  window.applyCloudCollection = function (merged) {
+    if (!merged || typeof merged !== "object") return;
+    applyingCloudSnapshot = true;
+    try {
+      collection = {};
+      Object.keys(merged).forEach((k) => {
+        const v = merged[k] || {};
+        collection[k] = { base: v.base | 0, secret: v.secret | 0 };
+      });
+      saveCollection();
+      refreshAllInputs();
+      updateAllProgress();
+    } finally {
+      applyingCloudSnapshot = false;
+    }
+  };
 
   // ---------- Boot ----------
 
