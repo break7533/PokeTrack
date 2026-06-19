@@ -386,6 +386,8 @@
     node.querySelector(".set__percent--base").textContent = basePct + "%";
     setBarTint(baseBar, basePct);
 
+    let complete = basePct >= 100;
+
     if (set.secret > 0) {
       const secretPct = percent(collected.secret, set.secret);
       const secretBar = node.querySelector(".progress-bar__fill--secret");
@@ -395,7 +397,10 @@
         node.querySelector(".set__percent--secret").textContent = secretPct + "%";
         setBarTint(secretBar, secretPct);
       }
+      complete = complete && secretPct >= 100;
     }
+
+    node.classList.toggle("set--complete", complete);
   }
 
   function updateEraProgress(eraNode) {
