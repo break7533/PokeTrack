@@ -16,6 +16,14 @@
  */
 const POKEMON_TCG_ERAS = [
   {
+    id: "mega-evolution",
+    name: "Mega Evolution",
+    sets: [
+      { id: "me-mega-evolution",   name: "Mega Evolution",                    base: 167, secret:  36 },
+      { id: "me-phantasmal-flames",name: "Phantasmal Flames",                 base: 180, secret:  44 }
+    ]
+  },
+  {
     id: "scarlet-violet",
     name: "Scarlet & Violet",
     sets: [
@@ -24,15 +32,17 @@ const POKEMON_TCG_ERAS = [
       { id: "sv-obsidian-flames",name: "Obsidian Flames",                   base: 197, secret:  33 },
       { id: "sv-151",            name: "Scarlet & Violet 151",              base: 165, secret:  42 },
       { id: "sv-paradox-rift",   name: "Paradox Rift",                      base: 182, secret:  84 },
-      { id: "sv-paldean-fates",  name: "Paldean Fates",                     base: 091, secret:  154 },
+      { id: "sv-paldean-fates",  name: "Paldean Fates",                     base: 91,  secret: 154 },
       { id: "sv-temporal-forces",name: "Temporal Forces",                   base: 162, secret:  56 },
       { id: "sv-twilight-masquerade", name: "Twilight Masquerade",          base: 167, secret:  59 },
-      { id: "sv-shrouded-fable", name: "Shrouded Fable",                    base: 064, secret:  35 },
+      { id: "sv-shrouded-fable", name: "Shrouded Fable",                    base: 64,  secret:  35 },
       { id: "sv-stellar-crown",  name: "Stellar Crown",                     base: 142, secret:  33 },
       { id: "sv-surging-sparks", name: "Surging Sparks",                    base: 191, secret:  61 },
       { id: "sv-prismatic-evolutions", name: "Prismatic Evolutions",        base: 131, secret:  49 },
       { id: "sv-journey-together", name: "Journey Together",                base: 159, secret:  31 },
-      { id: "sv-destined-rivals",name: "Destined Rivals",                   base: 182, secret:  62 }
+      { id: "sv-destined-rivals",name: "Destined Rivals",                   base: 182, secret:  62 },
+      { id: "sv-black-bolt",     name: "Black Bolt",                        base: 086, secret:  86 },
+      { id: "sv-white-flare",    name: "White Flare",                       base: 086, secret:  87 }
     ]
   },
   {
