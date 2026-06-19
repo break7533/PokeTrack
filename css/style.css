@@ -785,12 +785,12 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
 }
 
 .set__input {
-  width: 4rem;
+  width: 2.75rem;
   border: none;
   background: transparent;
   font-size: 0.95rem;
   font-weight: 600;
-  text-align: right;
+  text-align: center;
   color: var(--color-text);
   padding: 0.25rem 0;
   font-variant-numeric: tabular-nums;
@@ -965,9 +965,6 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
 }
 
 @media (max-width: 420px) {
-  .set__input {
-    width: 3.25rem;
-  }
   .header-actions .btn {
     flex: 1 1 auto;
   }
