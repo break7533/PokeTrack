@@ -334,17 +334,29 @@
     // ----- Base row -----
     const baseInput = node.querySelector(".set__input--base");
     const baseTotal = node.querySelector(".set__total--base");
+    const baseRow = node.querySelector(".set__row--base");
     baseInput.max = String(set.base);
     baseInput.value = String(collected.base);
     baseTotal.textContent = String(set.base);
 
-    baseInput.addEventListener("input", () => {
+    const triggerBaseUpdate = () => {
       const value = clamp(parseInt(baseInput.value, 10), 0, set.base);
       if (String(value) !== baseInput.value) baseInput.value = String(value);
       setCollected(set.id, "base", value);
       updateSetProgress(node, set);
       updateEraProgress(node.closest(".era"));
       updateOverallProgress();
+    };
+
+    baseInput.addEventListener("input", triggerBaseUpdate);
+
+    baseRow.querySelector(".set__step--minus").addEventListener("click", () => {
+      baseInput.value = String(clamp((parseInt(baseInput.value, 10) || 0) - 1, 0, set.base));
+      triggerBaseUpdate();
+    });
+    baseRow.querySelector(".set__step--plus").addEventListener("click", () => {
+      baseInput.value = String(clamp((parseInt(baseInput.value, 10) || 0) + 1, 0, set.base));
+      triggerBaseUpdate();
     });
 
     // ----- Secret row -----
@@ -357,13 +369,24 @@
       secretInput.value = String(collected.secret);
       secretTotal.textContent = String(set.secret);
 
-      secretInput.addEventListener("input", () => {
+      const triggerSecretUpdate = () => {
         const value = clamp(parseInt(secretInput.value, 10), 0, set.secret);
         if (String(value) !== secretInput.value) secretInput.value = String(value);
         setCollected(set.id, "secret", value);
         updateSetProgress(node, set);
         updateEraProgress(node.closest(".era"));
         updateOverallProgress();
+      };
+
+      secretInput.addEventListener("input", triggerSecretUpdate);
+
+      secretRow.querySelector(".set__step--minus").addEventListener("click", () => {
+        secretInput.value = String(clamp((parseInt(secretInput.value, 10) || 0) - 1, 0, set.secret));
+        triggerSecretUpdate();
+      });
+      secretRow.querySelector(".set__step--plus").addEventListener("click", () => {
+        secretInput.value = String(clamp((parseInt(secretInput.value, 10) || 0) + 1, 0, set.secret));
+        triggerSecretUpdate();
       });
     } else {
       // No secrets for this set — strip the secret row entirely so it
@@ -372,6 +395,29 @@
     }
 
     return node;
+  }
+
+  // ---------- Confetti ----------
+
+  function spawnConfetti(setNode) {
+    const container = document.createElement("div");
+    container.className = "confetti-burst";
+    setNode.style.position = "relative";
+    setNode.appendChild(container);
+
+    const colors = ["#FFCB05", "#EE1515", "#3B4CCA", "#22C55E", "#F59E0B", "#8B5CF6"];
+    for (let i = 0; i < 24; i++) {
+      const particle = document.createElement("span");
+      particle.className = "confetti-particle";
+      particle.style.setProperty("--x", (Math.random() * 200 - 100) + "px");
+      particle.style.setProperty("--y", (Math.random() * -80 - 20) + "px");
+      particle.style.setProperty("--r", (Math.random() * 360) + "deg");
+      particle.style.setProperty("--d", (Math.random() * 0.4 + 0.6) + "s");
+      particle.style.background = colors[i % colors.length];
+      container.appendChild(particle);
+    }
+
+    setTimeout(() => container.remove(), 1200);
   }
 
   // ---------- Progress updates ----------
@@ -405,6 +451,11 @@
     }
 
     node.classList.toggle("set--complete", complete);
+
+    if (complete && !node.dataset.wasComplete) {
+      spawnConfetti(node);
+    }
+    node.dataset.wasComplete = complete ? "1" : "";
   }
 
   function updateEraProgress(eraNode) {
@@ -623,6 +674,38 @@
     });
   }
 
+  // ---------- Search/filter ----------
+
+  function bindSearch() {
+    const input = document.getElementById("search-input");
+    const clearBtn = document.getElementById("search-clear");
+    const bar = input && input.closest(".search-bar");
+    if (!input) return;
+
+    const filter = () => {
+      const query = input.value.trim().toLowerCase();
+      bar.classList.toggle("search-bar--active", query.length > 0);
+
+      document.querySelectorAll(".era").forEach((era) => {
+        let visibleSets = 0;
+        era.querySelectorAll(".set").forEach((set) => {
+          const name = set.querySelector(".set__name").textContent.toLowerCase();
+          const match = !query || name.includes(query);
+          set.style.display = match ? "" : "none";
+          if (match) visibleSets++;
+        });
+        era.style.display = visibleSets > 0 ? "" : "none";
+      });
+    };
+
+    input.addEventListener("input", filter);
+    clearBtn.addEventListener("click", () => {
+      input.value = "";
+      filter();
+      input.focus();
+    });
+  }
+
   // ---------- Header actions ----------
 
   function bindHeaderActions() {
@@ -739,6 +822,7 @@
     bindShowSecretsToggle();
     bindHeaderToggle();
     render();
+    bindSearch();
     bindHeaderActions();
   });
 })();

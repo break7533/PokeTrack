@@ -145,6 +145,10 @@
   </header>
 
   <main class="container" id="eras-container">
+    <div class="search-bar">
+      <input type="search" class="search-input" id="search-input" placeholder="Search sets..." aria-label="Search sets" />
+      <button type="button" class="search-clear" id="search-clear" aria-label="Clear search">×</button>
+    </div>
     <!-- Eras and sets are rendered dynamically by js/app.js -->
     <p class="loading">Loading sets…</p>
   </main>
@@ -190,7 +194,9 @@
           <label class="set__row-label">
             <span class="set__row-label-text">Base</span>
             <span class="set__input-group">
+              <button type="button" class="set__step set__step--minus" aria-label="Decrease">−</button>
               <input type="number" class="set__input set__input--base" min="0" step="1" inputmode="numeric" />
+              <button type="button" class="set__step set__step--plus" aria-label="Increase">+</button>
               <span class="set__divider">/</span>
               <span class="set__total set__total--base">0</span>
             </span>
@@ -205,7 +211,9 @@
           <label class="set__row-label">
             <span class="set__row-label-text">Secret</span>
             <span class="set__input-group">
+              <button type="button" class="set__step set__step--minus" aria-label="Decrease">−</button>
               <input type="number" class="set__input set__input--secret" min="0" step="1" inputmode="numeric" />
+              <button type="button" class="set__step set__step--plus" aria-label="Increase">+</button>
               <span class="set__divider">/</span>
               <span class="set__total set__total--secret">0</span>
             </span>
