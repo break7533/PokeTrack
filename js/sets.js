@@ -19,8 +19,11 @@ const POKEMON_TCG_ERAS = [
     id: "mega-evolution",
     name: "Mega Evolution",
     sets: [
-      { id: "me-mega-evolution",   name: "Mega Evolution",                    base: 167, secret:  36 },
-      { id: "me-phantasmal-flames",name: "Phantasmal Flames",                 base: 180, secret:  44 }
+      { id: "me-mega-evolution",    name: "Mega Evolution",                   base: 132, secret:  56 },
+      { id: "me-phantasmal-flames", name: "Phantasmal Flames",                base:  94, secret:  36 },
+      { id: "me-ascended-heroes",   name: "Ascended Heroes",                  base: 217, secret:  78 },
+      { id: "me-perfect-order",     name: "Perfect Order",                    base:  88, secret:  36 },
+      { id: "me-chaos-rising",      name: "Chaos Rising",                     base:  86, secret:  36 }
     ]
   },
   {
@@ -41,8 +44,8 @@ const POKEMON_TCG_ERAS = [
       { id: "sv-prismatic-evolutions", name: "Prismatic Evolutions",        base: 131, secret:  49 },
       { id: "sv-journey-together", name: "Journey Together",                base: 159, secret:  31 },
       { id: "sv-destined-rivals",name: "Destined Rivals",                   base: 182, secret:  62 },
-      { id: "sv-black-bolt",     name: "Black Bolt",                        base: 086, secret:  86 },
-      { id: "sv-white-flare",    name: "White Flare",                       base: 086, secret:  87 }
+      { id: "sv-black-bolt",     name: "Black Bolt",                        base:  86, secret:  86 },
+      { id: "sv-white-flare",    name: "White Flare",                       base:  86, secret:  87 }
     ]
   },
   {
