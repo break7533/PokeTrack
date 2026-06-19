@@ -527,37 +527,45 @@ html[data-theme="dark"] .era__chevron {
   font-weight: 600;
 }
 
+/* ---------- Rows ---------- */
 /*
-  The per-row secret toggle button was removed in favor of a single
-  header-level "Show secret rows" button. Secret rows are hidden by
-  default and shown when <html> has the .show-secrets class.
+  The base row is a grid; the secret row is hidden by default and only
+  becomes a grid when html.show-secrets is set AND the set actually has
+  secrets (i.e. .set--no-secret is NOT applied).
 
-  Sets that have no secrets at all (set.secret === 0) get .set--no-secret
-  applied by app.js so we can keep them collapsed regardless of the
-  global toggle.
+  IMPORTANT: do NOT add a bare `.set__row { grid-template-columns: ... }`
+  rule, because `grid-template-columns` forces a row to render as a grid
+  even if we previously set `display: none`. (Specifically, the responsive
+  override at the bottom used to do exactly that and was un-hiding secret
+  rows on screens <=720px wide. Always pair grid-template-columns with a
+  selector that excludes the hidden secret row, or scope it explicitly.)
 */
+
+.set__row--base {
+  display: grid;
+  grid-template-columns: minmax(170px, 220px) 1fr 60px;
+  align-items: center;
+  gap: 0.85rem;
+}
+
 .set__row--secret {
   display: none;
   padding-top: 0.25rem;
   border-top: 1px dashed var(--color-border);
   margin-top: 0.25rem;
+  align-items: center;
+  gap: 0.85rem;
 }
 
 html.show-secrets .set:not(.set--no-secret) .set__row--secret {
   display: grid;
+  grid-template-columns: minmax(170px, 220px) 1fr 60px;
   animation: fadeSlide 180ms ease;
 }
 
 @keyframes fadeSlide {
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
-}
-
-.set__row {
-  display: grid;
-  grid-template-columns: minmax(170px, 220px) 1fr 60px;
-  align-items: center;
-  gap: 0.85rem;
 }
 
 .set__row-label {
@@ -700,10 +708,26 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
     font-size: 0.78rem;
   }
 
-  .set__row {
+  /*
+    Stack base row to a single column on narrow screens. We target the
+    base row explicitly here — NOT a bare `.set__row` selector — because
+    a bare selector would re-apply `grid-template-columns` to the secret
+    row too, which silently un-hides it on phones (the bug we just fixed).
+  */
+  .set__row--base {
     grid-template-columns: 1fr;
     gap: 0.45rem;
   }
+  /*
+    When the user has globally enabled secrets, also stack the secret row.
+    We keep this scoped under html.show-secrets so it can't accidentally
+    promote `display: none` -> grid for sets that should stay hidden.
+  */
+  html.show-secrets .set:not(.set--no-secret) .set__row--secret {
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
   .set__percent {
     text-align: left;
   }
