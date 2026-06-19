@@ -41,6 +41,10 @@
   // us suppress that round-trip.
   let applyingCloudSnapshot = false;
 
+  // Suppresses confetti during initial render so sets that were already
+  // complete before the page loaded don't all burst at once.
+  let initialRenderDone = false;
+
   // Per-page-load memoization for symbol-URL -> blob-URL resolution, so we
   // don't open the Cache Storage repeatedly for the same image while
   // scrolling or re-rendering. Keyed by the original https:// URL.
@@ -304,7 +308,13 @@
         img.width = 24;
         img.height = 24;
         img.src = src;
+        // Revoke object URL after the image is decoded to free memory.
+        // Only blob: URLs need revoking; plain https:// URLs are harmless.
+        img.onload = () => {
+          if (src.startsWith("blob:")) URL.revokeObjectURL(src);
+        };
         img.onerror = () => {
+          if (src.startsWith("blob:")) URL.revokeObjectURL(src);
           // Image failed to decode/render — fall back to the emoji span.
           const fallback = document.createElement("span");
           fallback.className = "set__symbol";
@@ -452,7 +462,7 @@
 
     node.classList.toggle("set--complete", complete);
 
-    if (complete && !node.dataset.wasComplete) {
+    if (complete && !node.dataset.wasComplete && initialRenderDone) {
       spawnConfetti(node);
     }
     node.dataset.wasComplete = complete ? "1" : "";
@@ -561,12 +571,11 @@
   }
 
   function findSet(setId) {
-    for (const era of POKEMON_TCG_ERAS) {
-      const found = era.sets.find((s) => s.id === setId);
-      if (found) return found;
-    }
-    return null;
+    return setLookup.get(setId) || null;
   }
+
+  /** @type {Map<string, object>} Pre-built index for O(1) set lookups. */
+  const setLookup = new Map();
 
   function setBarTint(barEl, pct) {
     // Adds a class so CSS can color-code progress (red → yellow → green)
@@ -659,8 +668,9 @@
     const btn = header && header.querySelector(".header-toggle");
     if (!btn) return;
 
+    const HEADER_COLLAPSED_KEY = "poketrack:header-collapsed:v1";
     const isMobile = () => window.innerWidth <= 720;
-    const saved = localStorage.getItem("header-collapsed");
+    const saved = localStorage.getItem(HEADER_COLLAPSED_KEY);
     if (saved === "true" || (saved === null && isMobile())) {
       header.classList.add("site-header--collapsed");
     }
@@ -668,7 +678,7 @@
     btn.addEventListener("click", () => {
       header.classList.toggle("site-header--collapsed");
       localStorage.setItem(
-        "header-collapsed",
+        HEADER_COLLAPSED_KEY,
         header.classList.contains("site-header--collapsed")
       );
     });
@@ -681,6 +691,8 @@
     const clearBtn = document.getElementById("search-clear");
     const bar = input && input.closest(".search-bar");
     if (!input) return;
+
+    let rafId = null;
 
     const filter = () => {
       const query = input.value.trim().toLowerCase();
@@ -698,7 +710,12 @@
       });
     };
 
-    input.addEventListener("input", filter);
+    const scheduleFilter = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(filter);
+    };
+
+    input.addEventListener("input", scheduleFilter);
     clearBtn.addEventListener("click", () => {
       input.value = "";
       filter();
@@ -817,11 +834,14 @@
       }
       return;
     }
+    // Build O(1) set lookup index
+    POKEMON_TCG_ERAS.forEach((era) => era.sets.forEach((s) => setLookup.set(s.id, s)));
     setupHeaderHeightVar();
     bindThemeToggle();
     bindShowSecretsToggle();
     bindHeaderToggle();
     render();
+    initialRenderDone = true;
     bindSearch();
     bindHeaderActions();
   });

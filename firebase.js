@@ -168,28 +168,59 @@ function renderAuthButton(user) {
   const btn = document.getElementById("auth-btn");
   if (!btn) return;
 
+  // Clear existing content safely
+  btn.textContent = "";
+
   if (user) {
     btn.title = `Signed in as ${user.displayName || user.email} — click to sign out`;
     btn.setAttribute("aria-label", "Sign out");
     btn.classList.add("auth-btn--signed-in");
-    btn.innerHTML = user.photoURL
-      ? `<img src="${user.photoURL}" alt="" width="22" height="22" referrerpolicy="no-referrer" />`
-      : `<span class="auth-btn__initial">${(user.displayName || user.email || "?")
-          .charAt(0)
-          .toUpperCase()}</span>`;
+
+    if (user.photoURL) {
+      const img = document.createElement("img");
+      img.src = user.photoURL;
+      img.alt = "";
+      img.width = 22;
+      img.height = 22;
+      img.referrerPolicy = "no-referrer";
+      btn.appendChild(img);
+    } else {
+      const span = document.createElement("span");
+      span.className = "auth-btn__initial";
+      span.textContent = (user.displayName || user.email || "?")
+        .charAt(0)
+        .toUpperCase();
+      btn.appendChild(span);
+    }
   } else {
     btn.title = "Sign in with Google to sync across devices";
     btn.setAttribute("aria-label", "Sign in with Google");
     btn.classList.remove("auth-btn--signed-in");
-    btn.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-        <path fill="currentColor" d="M21.6 12.227c0-.708-.064-1.39-.182-2.045H12v3.868h5.39a4.604 4.604 0 0 1-1.997 3.022v2.51h3.231c1.89-1.741 2.976-4.305 2.976-7.355z"/>
-        <path fill="currentColor" d="M12 22c2.7 0 4.964-.895 6.62-2.418l-3.232-2.51c-.895.6-2.04.955-3.388.955-2.605 0-4.81-1.76-5.598-4.123H3.064v2.59A9.996 9.996 0 0 0 12 22z"/>
-        <path fill="currentColor" d="M6.402 13.904a6.01 6.01 0 0 1 0-3.808V7.506H3.064a10 10 0 0 0 0 8.988l3.338-2.59z"/>
-        <path fill="currentColor" d="M12 5.973c1.468 0 2.786.505 3.823 1.496l2.867-2.867C16.96 3.003 14.696 2 12 2 8.09 2 4.713 4.247 3.064 7.506l3.338 2.59C7.19 7.733 9.395 5.973 12 5.973z"/>
-      </svg>
-      <span class="auth-btn__label">Sign in</span>
-    `;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("width", "16");
+    svg.setAttribute("height", "16");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("aria-hidden", "true");
+
+    const paths = [
+      "M21.6 12.227c0-.708-.064-1.39-.182-2.045H12v3.868h5.39a4.604 4.604 0 0 1-1.997 3.022v2.51h3.231c1.89-1.741 2.976-4.305 2.976-7.355z",
+      "M12 22c2.7 0 4.964-.895 6.62-2.418l-3.232-2.51c-.895.6-2.04.955-3.388.955-2.605 0-4.81-1.76-5.598-4.123H3.064v2.59A9.996 9.996 0 0 0 12 22z",
+      "M6.402 13.904a6.01 6.01 0 0 1 0-3.808V7.506H3.064a10 10 0 0 0 0 8.988l3.338-2.59z",
+      "M12 5.973c1.468 0 2.786.505 3.823 1.496l2.867-2.867C16.96 3.003 14.696 2 12 2 8.09 2 4.713 4.247 3.064 7.506l3.338 2.59C7.19 7.733 9.395 5.973 12 5.973z"
+    ];
+    paths.forEach((d) => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("fill", "currentColor");
+      path.setAttribute("d", d);
+      svg.appendChild(path);
+    });
+    btn.appendChild(svg);
+
+    const label = document.createElement("span");
+    label.className = "auth-btn__label";
+    label.textContent = "Sign in";
+    btn.appendChild(label);
   }
 }
 

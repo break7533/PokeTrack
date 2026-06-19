@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTrack — Pokémon TCG Collection Tracker</title>
   <meta name="description" content="Track your Pokémon TCG collection progress across every English set and era." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <!-- Open Graph / social sharing -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PokéTrack — Pokémon TCG Collection Tracker" />
+  <meta property="og:description" content="Track your Pokémon TCG collection progress across every English set and era." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="PokéTrack — Pokémon TCG Collection Tracker" />
+  <meta name="twitter:description" content="Track your Pokémon TCG collection progress across every English set and era." />
   <!--
     Tell the browser we ship a dark color scheme by default. This makes
     UA-rendered chrome (form controls, scrollbars, the initial blank
@@ -145,6 +153,9 @@
   </header>
 
   <main class="container" id="eras-container">
+    <noscript>
+      <p class="error">PokéTrack requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </noscript>
     <div class="search-bar">
       <input type="search" class="search-input" id="search-input" placeholder="Search sets..." aria-label="Search sets" />
       <button type="button" class="search-clear" id="search-clear" aria-label="Clear search">×</button>

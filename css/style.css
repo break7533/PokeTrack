@@ -470,6 +470,7 @@ main {
   border-radius: var(--radius-lg);
   margin-bottom: 1.25rem;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 .era:first-child {
   margin-top: 1.25rem;
@@ -490,8 +491,6 @@ main {
 .era[data-era-id="neo"]            { --era-accent: #14B8A6; }
 .era[data-era-id="base"]           { --era-accent: #FFCB05; }
 .era[data-era-id="other"]          { --era-accent: #78716C; }
-  box-shadow: var(--shadow-sm);
-}
 
 .era__toggle {
   display: flex;
