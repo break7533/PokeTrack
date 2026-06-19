@@ -10,6 +10,9 @@
  *   - Validate input (non-negative integers, capped at the set's total)
  *   - Optionally sync to Firestore via the window.* hooks defined by
  *     firebase.js (no-op if firebase.js failed to init or isn't loaded)
+ *   - Load expansion-symbol images from Bulbagarden Archives through a
+ *     7-day Cache Storage API layer, with an emoji fallback so users
+ *     never see a broken-image icon.
  */
 (function () {
   "use strict";
@@ -20,6 +23,11 @@
   const ERA_COLLAPSED_KEY = "poketrack:collapsed-eras:v1";
   const SHOW_SECRETS_KEY = "poketrack:show-secrets:v1";
   const THEME_KEY = "poketrack:theme:v1";
+
+  // Cache Storage API namespace + TTL for set-symbol images. Bumping the
+  // version (v1 -> v2) on a future change will invalidate every entry.
+  const SYMBOL_CACHE_NAME = "poketrack-symbols-v1";
+  const SYMBOL_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
   // ---------- State ----------
 
@@ -32,6 +40,12 @@
   // want each per-set value-write to re-trigger a cloud sync. This flag lets
   // us suppress that round-trip.
   let applyingCloudSnapshot = false;
+
+  // Per-page-load memoization for symbol-URL -> blob-URL resolution, so we
+  // don't open the Cache Storage repeatedly for the same image while
+  // scrolling or re-rendering. Keyed by the original https:// URL.
+  /** @type {Map<string, Promise<string>>} */
+  const symbolUrlCache = new Map();
 
   // ---------- Persistence ----------
 
@@ -120,6 +134,104 @@
     return Math.round((collected / total) * 100);
   }
 
+  // ---------- Set-symbol loader (Cache Storage API, 7-day TTL) ----------
+
+  /**
+   * Resolve a remote symbol URL to a usable <img src=...> string, going
+   * through a 7-day Cache Storage layer so subsequent page loads (or
+   * other sets pointing at the same image) hit the cache instantly.
+   *
+   * Strategy:
+   *   1. If Cache Storage isn't available (file://, ancient browsers,
+   *      Safari private mode), just return the original URL — the
+   *      browser HTTP cache will still apply.
+   *   2. Look up the URL in our named cache. Each cached Response has
+   *      an `x-poketrack-cached-at` header we wrote ourselves. If the
+   *      entry is still fresh (< 7 days old), turn its body into an
+   *      object URL and return that.
+   *   3. Otherwise fetch the image, clone it, stamp the timestamp
+   *      header, store it, and return an object URL of the body.
+   *   4. On any error, fall back to returning the original URL so the
+   *      browser can try a normal network load.
+   *
+   * Note: we deliberately store the body bytes (not just the URL) so
+   * that once cached, the image is fully offline-capable for the next
+   * 7 days.
+   *
+   * @param {string} url
+   * @returns {Promise<string>} a src= URL the renderer can assign to img.src
+   */
+  function loadSetSymbol(url) {
+    if (!url) return Promise.reject(new Error("no url"));
+
+    // Memoize for this page load to avoid repeated cache opens.
+    const memo = symbolUrlCache.get(url);
+    if (memo) return memo;
+
+    const p = (async () => {
+      // Cache Storage is unavailable in some contexts (file://, very old
+      // browsers). Gracefully degrade to a plain network load.
+      if (typeof caches === "undefined" || !caches || !caches.open) {
+        return url;
+      }
+
+      try {
+        const cache = await caches.open(SYMBOL_CACHE_NAME);
+        const existing = await cache.match(url);
+
+        if (existing) {
+          const cachedAt = parseInt(
+            existing.headers.get("x-poketrack-cached-at") || "0",
+            10
+          );
+          const ageMs = Date.now() - (Number.isFinite(cachedAt) ? cachedAt : 0);
+          if (ageMs >= 0 && ageMs < SYMBOL_CACHE_TTL_MS) {
+            // Fresh — serve from cache as an object URL so the <img>
+            // doesn't re-hit the network.
+            const blob = await existing.blob();
+            return URL.createObjectURL(blob);
+          }
+          // Stale — fall through to refetch and overwrite.
+        }
+
+        // Network fetch. Wikimedia sends CORS headers (`Access-Control-
+        // Allow-Origin: *`) for upload.wikimedia.org / archives.bulbagarden.net,
+        // so a default-mode fetch works and we can read the body.
+        const netRes = await fetch(url, { mode: "cors", credentials: "omit" });
+        if (!netRes.ok) {
+          throw new Error("symbol fetch failed: " + netRes.status);
+        }
+
+        // We can't put `netRes` directly into the cache *and* read its body
+        // for the object URL — Responses are single-use. Buffer the body
+        // into a Blob once, then build two separate Responses from it.
+        const blob = await netRes.blob();
+        const headers = new Headers();
+        const ct = netRes.headers.get("content-type");
+        if (ct) headers.set("content-type", ct);
+        headers.set("x-poketrack-cached-at", String(Date.now()));
+
+        const stored = new Response(blob, { status: 200, headers });
+        // Don't await the put — a failure to cache (quota, etc.) shouldn't
+        // delay the UI from showing the symbol.
+        cache.put(url, stored).catch(() => { /* ignore quota errors */ });
+
+        return URL.createObjectURL(blob);
+      } catch (err) {
+        // CORS rejection, offline, etc. Hand back the original URL —
+        // <img> can still load it normally even when fetch() can't read it.
+        console.debug("PokéTrack: symbol cache fell back for", url, err);
+        return url;
+      }
+    })();
+
+    symbolUrlCache.set(url, p);
+    // If the promise rejects (shouldn't, since we catch above) drop the
+    // memo so a later call can retry.
+    p.catch(() => symbolUrlCache.delete(url));
+    return p;
+  }
+
   // ---------- Rendering ----------
 
   function render() {
@@ -163,7 +275,51 @@
   function buildSetNode(set, setTemplate) {
     const node = setTemplate.content.firstElementChild.cloneNode(true);
     node.dataset.setId = set.id;
-    node.querySelector(".set__name").textContent = set.name;
+
+    // ----- Set symbol + name -----
+    // We always inject a `.set__symbol` element BEFORE the name so the
+    // header layout is stable. Default content is the emoji fallback —
+    // it shows instantly on first paint. If the set has a remote symbol
+    // URL, we then async-swap in an <img> once the Cache Storage loader
+    // resolves. If the image errors out later, we revert to the emoji.
+    const headerEl = node.querySelector(".set__header");
+    const nameEl = node.querySelector(".set__name");
+    nameEl.textContent = set.name;
+
+    const symbolEl = document.createElement("span");
+    symbolEl.className = "set__symbol";
+    symbolEl.setAttribute("aria-hidden", "true");
+    symbolEl.textContent = set.fallback || "•";
+    headerEl.insertBefore(symbolEl, nameEl);
+
+    if (set.symbol) {
+      // Kick off the cached load. Don't block rendering on it.
+      loadSetSymbol(set.symbol).then((src) => {
+        const img = document.createElement("img");
+        img.className = "set__symbol set__symbol--img";
+        img.alt = ""; // decorative; name is right next to it
+        img.loading = "lazy";
+        img.decoding = "async";
+        img.referrerPolicy = "no-referrer";
+        img.width = 24;
+        img.height = 24;
+        img.src = src;
+        img.onerror = () => {
+          // Image failed to decode/render — fall back to the emoji span.
+          const fallback = document.createElement("span");
+          fallback.className = "set__symbol";
+          fallback.setAttribute("aria-hidden", "true");
+          fallback.textContent = set.fallback || "•";
+          if (img.parentNode) img.parentNode.replaceChild(fallback, img);
+        };
+        // Replace the emoji placeholder once the src is ready.
+        if (symbolEl.parentNode) {
+          symbolEl.parentNode.replaceChild(img, symbolEl);
+        }
+      }).catch(() => {
+        // Loader failed entirely — leave the emoji in place.
+      });
+    }
 
     const collected = getCollected(set.id);
     const hasSecret = set.secret > 0;
