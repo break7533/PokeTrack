@@ -738,9 +738,31 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
 
 /* ---------- Responsive ---------- */
 
+.header-toggle {
+  display: none;
+}
+
+.header-toggle__icon {
+  transition: transform var(--transition-fast);
+  font-size: 0.7rem;
+}
+
 @media (max-width: 720px) {
   .site-header {
     padding: 0.7rem 0 0.75rem;
+  }
+
+  .header-toggle {
+    display: inline-flex;
+  }
+
+  .site-header--collapsed .header-toggle__icon {
+    transform: rotate(-90deg);
+  }
+
+  .site-header--collapsed .overall-stats,
+  .site-header--collapsed .header-actions {
+    display: none;
   }
 
   .era__toggle {

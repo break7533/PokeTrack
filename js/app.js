@@ -592,6 +592,28 @@
     });
   }
 
+  // ---------- Header collapse (mobile) ----------
+
+  function bindHeaderToggle() {
+    const header = document.querySelector(".site-header");
+    const btn = header && header.querySelector(".header-toggle");
+    if (!btn) return;
+
+    const isMobile = () => window.innerWidth <= 720;
+    const saved = localStorage.getItem("header-collapsed");
+    if (saved === "true" || (saved === null && isMobile())) {
+      header.classList.add("site-header--collapsed");
+    }
+
+    btn.addEventListener("click", () => {
+      header.classList.toggle("site-header--collapsed");
+      localStorage.setItem(
+        "header-collapsed",
+        header.classList.contains("site-header--collapsed")
+      );
+    });
+  }
+
   // ---------- Header actions ----------
 
   function bindHeaderActions() {
@@ -706,6 +728,7 @@
     setupHeaderHeightVar();
     bindThemeToggle();
     bindShowSecretsToggle();
+    bindHeaderToggle();
     render();
     bindHeaderActions();
   });
