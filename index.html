@@ -5,24 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PokéTrack — Pokémon TCG Collection Tracker</title>
   <meta name="description" content="Track your Pokémon TCG collection progress across every English set and era." />
+  <!--
+    Tell the browser we ship a dark color scheme by default. This makes
+    UA-rendered chrome (form controls, scrollbars, the initial blank
+    canvas before our CSS loads) match the dark theme so there's no
+    bright flash on first paint.
+  -->
+  <meta name="color-scheme" content="dark light" />
   <link rel="stylesheet" href="css/style.css" />
   <!--
     Apply the saved theme BEFORE the stylesheet paints, to avoid a flash
-    of the light theme when the user has dark mode enabled. Kept tiny
-    and self-contained so it can run inline without bundling.
+    of the wrong theme on reload. Dark is the DEFAULT — only switch to
+    light if the user has explicitly chosen it. Kept tiny and self-
+    contained so it can run inline without bundling.
   -->
   <script>
     (function () {
       try {
         var saved = localStorage.getItem("poketrack:theme:v1");
-        if (saved === "dark") {
+        // Default = dark. Only light if the user explicitly picked it.
+        if (saved !== "light") {
           document.documentElement.setAttribute("data-theme", "dark");
         }
         var secrets = localStorage.getItem("poketrack:show-secrets:v1");
         if (secrets === "1") {
           document.documentElement.classList.add("show-secrets");
         }
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        // localStorage can throw in privacy modes; fall back to dark.
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
     })();
   </script>
 </head>
