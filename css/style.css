@@ -517,29 +517,81 @@ html[data-theme="dark"] .era__chevron {
 .set__header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
+  justify-content: flex-start;
+  gap: 0.6rem;
 }
 
 .set__name {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
+  /*
+    Let the name take the remaining space but allow it to truncate
+    gracefully on narrow viewports instead of pushing the symbol
+    around. The symbol has a fixed width so the flex math is stable.
+  */
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
-/* ---------- Rows ---------- */
+/* ---------- Set symbol ---------- */
 /*
-  The base row is a grid; the secret row is hidden by default and only
-  becomes a grid when html.show-secrets is set AND the set actually has
-  secrets (i.e. .set--no-secret is NOT applied).
+  The set symbol sits to the LEFT of the set name inside .set__header.
+  js/app.js always inserts a `.set__symbol` element on every set:
 
-  IMPORTANT: do NOT add a bare `.set__row { grid-template-columns: ... }`
-  rule, because `grid-template-columns` forces a row to render as a grid
-  even if we previously set `display: none`. (Specifically, the responsive
-  override at the bottom used to do exactly that and was un-hiding secret
-  rows on screens <=720px wide. Always pair grid-template-columns with a
-  selector that excludes the hidden secret row, or scope it explicitly.)
+    1. Initially a <span class="set__symbol"> containing the emoji
+       fallback (set.fallback in js/sets.js). Renders instantly,
+       no layout shift, no network dependency.
+
+    2. If the set has a remote image URL, the loader resolves it
+       through the 7-day Cache Storage layer and swaps the span for
+       an <img class="set__symbol set__symbol--img">. The two share
+       the base `.set__symbol` rules below so layout doesn't jump.
+
+    3. If the <img> errors out, app.js reverts to the emoji span.
+
+  Box size is fixed (28x28 desktop / 24x24 mobile) so the header
+  layout is identical regardless of which variant is currently shown.
 */
+.set__symbol {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  /* Emoji-variant sizing — keeps the fallback the same physical size as the img */
+  font-size: 1.1rem;
+  line-height: 1;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  overflow: hidden;
+  user-select: none;
+  /* Subtle pop on the dark theme; harmless on light */
+  box-shadow: var(--shadow-sm);
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.set__symbol--img {
+  /* The <img> variant fills the box but preserves aspect ratio. */
+  padding: 3px;
+  object-fit: contain;
+  /* The container's font-size/line-height aren't relevant for images,
+     but we keep the same box rules from .set__symbol so layout is stable. */
+}
+
+/*
+  Most expansion symbols are dark silhouettes on a transparent
+  background, which would essentially disappear against the dark
+  surface. Invert in dark mode so they read as light-on-dark.
+  Only applies to the <img> variant — the emoji fallback should
+  stay its natural color.
+*/
+html[data-theme="dark"] .set__symbol--img {
+  filter: invert(0.92) hue-rotate(180deg);
+}
 
 .set__row--base {
   display: grid;
@@ -706,6 +758,17 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
     margin-left: 1.75rem;
     width: 100%;
     font-size: 0.78rem;
+  }
+
+  /*
+    Slightly smaller symbol on phones so the header doesn't wrap.
+    Still readable at this size — 24px is the practical minimum for
+    Bulbapedia's expansion symbols to remain identifiable.
+  */
+  .set__symbol {
+    width: 24px;
+    height: 24px;
+    font-size: 1rem;
   }
 
   /*
