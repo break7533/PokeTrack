@@ -383,7 +383,9 @@
     const baseBar = node.querySelector(".progress-bar__fill--base");
     baseBar.style.width = basePct + "%";
     baseBar.parentElement.setAttribute("aria-valuenow", String(basePct));
-    node.querySelector(".set__percent--base").textContent = basePct + "%";
+    const basePctEl = node.querySelector(".set__percent--base");
+    basePctEl.textContent = basePct >= 100 ? "✓ 100%" : basePct + "%";
+    basePctEl.classList.toggle("set__percent--done", basePct >= 100);
     setBarTint(baseBar, basePct);
 
     let complete = basePct >= 100;
@@ -394,7 +396,9 @@
       if (secretBar) {
         secretBar.style.width = secretPct + "%";
         secretBar.parentElement.setAttribute("aria-valuenow", String(secretPct));
-        node.querySelector(".set__percent--secret").textContent = secretPct + "%";
+        const secretPctEl = node.querySelector(".set__percent--secret");
+        secretPctEl.textContent = secretPct >= 100 ? "✓ 100%" : secretPct + "%";
+        secretPctEl.classList.toggle("set__percent--done", secretPct >= 100);
         setBarTint(secretBar, secretPct);
       }
       complete = complete && secretPct >= 100;
