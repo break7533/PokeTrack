@@ -6,6 +6,25 @@
   <title>PokéTrack — Pokémon TCG Collection Tracker</title>
   <meta name="description" content="Track your Pokémon TCG collection progress across every English set and era." />
   <link rel="stylesheet" href="css/style.css" />
+  <!--
+    Apply the saved theme BEFORE the stylesheet paints, to avoid a flash
+    of the light theme when the user has dark mode enabled. Kept tiny
+    and self-contained so it can run inline without bundling.
+  -->
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("poketrack:theme:v1");
+        if (saved === "dark") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+        var secrets = localStorage.getItem("poketrack:show-secrets:v1");
+        if (secrets === "1") {
+          document.documentElement.classList.add("show-secrets");
+        }
+      } catch (e) { /* ignore */ }
+    })();
+  </script>
 </head>
 <body>
   <header class="site-header">
@@ -14,30 +33,43 @@
         <h1 class="site-title">
           <span class="logo-mark">⚡</span> PokéTrack
         </h1>
-        <!--
-          Google sign-in / sign-out button.
-          - Without sign-in: PokéTrack stays 100% local (localStorage).
-          - With sign-in:    collection is synced to Firestore at /users/{uid}.
-          The button's icon, label, and behavior are managed by firebase.js.
-        -->
-        <button
-          type="button"
-          id="auth-btn"
-          class="auth-btn"
-          aria-label="Sign in with Google"
-          title="Sign in with Google to sync across devices"
-        >
-          <!-- Initial content; replaced by firebase.js once auth state is known -->
-          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M21.6 12.227c0-.708-.064-1.39-.182-2.045H12v3.868h5.39a4.604 4.604 0 0 1-1.997 3.022v2.51h3.231c1.89-1.741 2.976-4.305 2.976-7.355z"/>
-            <path fill="currentColor" d="M12 22c2.7 0 4.964-.895 6.62-2.418l-3.232-2.51c-.895.6-2.04.955-3.388.955-2.605 0-4.81-1.76-5.598-4.123H3.064v2.59A9.996 9.996 0 0 0 12 22z"/>
-            <path fill="currentColor" d="M6.402 13.904a6.01 6.01 0 0 1 0-3.808V7.506H3.064a10 10 0 0 0 0 8.988l3.338-2.59z"/>
-            <path fill="currentColor" d="M12 5.973c1.468 0 2.786.505 3.823 1.496l2.867-2.867C16.96 3.003 14.696 2 12 2 8.09 2 4.713 4.247 3.064 7.506l3.338 2.59C7.19 7.733 9.395 5.973 12 5.973z"/>
-          </svg>
-          <span class="auth-btn__label">Sign in</span>
-        </button>
+
+        <div class="site-header__actions">
+          <!-- Dark / light theme toggle. Wired up by js/app.js. -->
+          <button
+            type="button"
+            id="theme-btn"
+            class="icon-btn"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            <span class="icon-btn__icon" aria-hidden="true">🌙</span>
+          </button>
+
+          <!--
+            Google sign-in / sign-out button.
+            - Without sign-in: PokéTrack stays 100% local (localStorage).
+            - With sign-in:    collection is synced to Firestore at /users/{uid}.
+            The button's icon, label, and behavior are managed by firebase.js.
+          -->
+          <button
+            type="button"
+            id="auth-btn"
+            class="auth-btn"
+            aria-label="Sign in with Google"
+            title="Sign in with Google to sync across devices"
+          >
+            <!-- Initial content; replaced by firebase.js once auth state is known -->
+            <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M21.6 12.227c0-.708-.064-1.39-.182-2.045H12v3.868h5.39a4.604 4.604 0 0 1-1.997 3.022v2.51h3.231c1.89-1.741 2.976-4.305 2.976-7.355z"/>
+              <path fill="currentColor" d="M12 22c2.7 0 4.964-.895 6.62-2.418l-3.232-2.51c-.895.6-2.04.955-3.388.955-2.605 0-4.81-1.76-5.598-4.123H3.064v2.59A9.996 9.996 0 0 0 12 22z"/>
+              <path fill="currentColor" d="M6.402 13.904a6.01 6.01 0 0 1 0-3.808V7.506H3.064a10 10 0 0 0 0 8.988l3.338-2.59z"/>
+              <path fill="currentColor" d="M12 5.973c1.468 0 2.786.505 3.823 1.496l2.867-2.867C16.96 3.003 14.696 2 12 2 8.09 2 4.713 4.247 3.064 7.506l3.338 2.59C7.19 7.733 9.395 5.973 12 5.973z"/>
+            </svg>
+            <span class="auth-btn__label">Sign in</span>
+          </button>
+        </div>
       </div>
-      <p class="site-subtitle">Your Pokémon TCG collection progress</p>
 
       <section class="overall-stats" aria-label="Overall collection statistics">
         <div class="stat-card stat-card--base">
@@ -81,6 +113,9 @@
       </section>
 
       <div class="header-actions">
+        <button type="button" id="show-secrets-btn" class="btn btn--ghost" aria-pressed="false">
+          Show secret rows
+        </button>
         <button type="button" id="expand-all-btn" class="btn btn--ghost">Expand all eras</button>
         <button type="button" id="collapse-all-btn" class="btn btn--ghost">Collapse all eras</button>
         <button type="button" id="reset-btn" class="btn btn--danger">Reset all data</button>
@@ -128,10 +163,6 @@
       <div class="set__main">
         <div class="set__header">
           <h3 class="set__name"></h3>
-          <button type="button" class="set__secret-toggle" aria-expanded="false" hidden>
-            <span class="set__secret-toggle-icon" aria-hidden="true">▸</span>
-            <span class="set__secret-toggle-label">Secrets</span>
-          </button>
         </div>
 
         <div class="set__row set__row--base">
@@ -149,7 +180,7 @@
           <span class="set__percent set__percent--base">0%</span>
         </div>
 
-        <div class="set__row set__row--secret" hidden>
+        <div class="set__row set__row--secret">
           <label class="set__row-label">
             <span class="set__row-label-text">Secret</span>
             <span class="set__input-group">
