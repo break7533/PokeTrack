@@ -5,7 +5,8 @@
  *   - Render eras and their sets from POKEMON_TCG_ERAS (js/sets.js)
  *   - Persist user-entered collection counts in localStorage
  *   - Recompute per-set, per-era, and overall progress on every change
- *   - Toggle visibility of per-set secret rows and entire era sections
+ *   - Toggle visibility of secret rows globally and entire era sections
+ *   - Toggle light / dark theme
  *   - Validate input (non-negative integers, capped at the set's total)
  *   - Optionally sync to Firestore via the window.* hooks defined by
  *     firebase.js (no-op if firebase.js failed to init or isn't loaded)
@@ -17,7 +18,8 @@
 
   const STORAGE_KEY = "poketrack:v1";
   const ERA_COLLAPSED_KEY = "poketrack:collapsed-eras:v1";
-  const SET_SECRET_OPEN_KEY = "poketrack:open-secrets:v1";
+  const SHOW_SECRETS_KEY = "poketrack:show-secrets:v1";
+  const THEME_KEY = "poketrack:theme:v1";
 
   // ---------- State ----------
 
@@ -25,8 +27,6 @@
   let collection = loadCollection();
   /** @type {Set<string>} */
   let collapsedEras = loadStringSet(ERA_COLLAPSED_KEY);
-  /** @type {Set<string>} */
-  let openSecrets = loadStringSet(SET_SECRET_OPEN_KEY);
 
   // When firebase.js pushes a merged cloud snapshot back into us, we don't
   // want each per-set value-write to re-trigger a cloud sync. This flag lets
@@ -73,6 +73,20 @@
     } catch (err) {
       console.warn("PokéTrack: failed to save", key, err);
     }
+  }
+
+  function loadBool(key) {
+    try {
+      return localStorage.getItem(key) === "1";
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function saveBool(key, value) {
+    try {
+      localStorage.setItem(key, value ? "1" : "0");
+    } catch (_) { /* ignore */ }
   }
 
   // ---------- Helpers ----------
@@ -152,6 +166,14 @@
     node.querySelector(".set__name").textContent = set.name;
 
     const collected = getCollected(set.id);
+    const hasSecret = set.secret > 0;
+
+    // Mark sets that have no secret cards so the global "Show secrets"
+    // toggle (driven by the .show-secrets class on <html>) won't reveal
+    // an empty row for them.
+    if (!hasSecret) {
+      node.classList.add("set--no-secret");
+    }
 
     // ----- Base row -----
     const baseInput = node.querySelector(".set__input--base");
@@ -171,32 +193,13 @@
 
     // ----- Secret row -----
     const secretRow = node.querySelector(".set__row--secret");
-    const secretToggle = node.querySelector(".set__secret-toggle");
     const secretInput = node.querySelector(".set__input--secret");
     const secretTotal = node.querySelector(".set__total--secret");
 
-    if (set.secret > 0) {
-      secretToggle.hidden = false;
+    if (hasSecret) {
       secretInput.max = String(set.secret);
       secretInput.value = String(collected.secret);
       secretTotal.textContent = String(set.secret);
-
-      const isOpen = openSecrets.has(set.id);
-      if (isOpen) {
-        secretRow.hidden = false;
-        secretToggle.setAttribute("aria-expanded", "true");
-        secretToggle.querySelector(".set__secret-toggle-icon").textContent = "▾";
-      }
-
-      secretToggle.addEventListener("click", () => {
-        const nowOpen = secretRow.hidden;
-        secretRow.hidden = !nowOpen;
-        secretToggle.setAttribute("aria-expanded", String(nowOpen));
-        secretToggle.querySelector(".set__secret-toggle-icon").textContent = nowOpen ? "▾" : "▸";
-        if (nowOpen) openSecrets.add(set.id);
-        else openSecrets.delete(set.id);
-        saveStringSet(SET_SECRET_OPEN_KEY, openSecrets);
-      });
 
       secretInput.addEventListener("input", () => {
         const value = clamp(parseInt(secretInput.value, 10), 0, set.secret);
@@ -207,8 +210,8 @@
         updateOverallProgress();
       });
     } else {
-      // Hide the toggle entirely when a set has no secrets
-      secretToggle.hidden = true;
+      // No secrets for this set — strip the secret row entirely so it
+      // can never be revealed by the global toggle.
       secretRow.remove();
     }
 
@@ -358,6 +361,81 @@
     else barEl.classList.add("progress-bar__fill--low");
   }
 
+  // ---------- Sticky header sizing ----------
+
+  /**
+   * The header is position: fixed. Reserve space for it on <body> via a
+   * CSS variable so the first era card isn't hidden underneath it.
+   * Re-measure on resize and whenever the header's own size changes
+   * (e.g. when buttons wrap to a new row on narrow viewports).
+   */
+  function setupHeaderHeightVar() {
+    const header = document.querySelector(".site-header");
+    if (!header) return;
+
+    const apply = () => {
+      const h = header.getBoundingClientRect().height;
+      document.documentElement.style.setProperty("--site-header-height", h + "px");
+    };
+
+    apply();
+    window.addEventListener("resize", apply);
+    if (typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(apply).observe(header);
+    }
+  }
+
+  // ---------- Theme & secret-row toggles ----------
+
+  function bindThemeToggle() {
+    const btn = document.getElementById("theme-btn");
+    if (!btn) return;
+
+    const iconEl = btn.querySelector(".icon-btn__icon");
+    const sync = () => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      btn.setAttribute("aria-pressed", String(isDark));
+      btn.setAttribute("aria-label", isDark ? "Switch to light mode" : "Switch to dark mode");
+      btn.setAttribute("title", isDark ? "Switch to light mode" : "Switch to dark mode");
+      if (iconEl) iconEl.textContent = isDark ? "☀️" : "🌙";
+    };
+    sync();
+
+    btn.addEventListener("click", () => {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (isDark) {
+        document.documentElement.removeAttribute("data-theme");
+        try { localStorage.setItem(THEME_KEY, "light"); } catch (_) { /* ignore */ }
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+        try { localStorage.setItem(THEME_KEY, "dark"); } catch (_) { /* ignore */ }
+      }
+      sync();
+    });
+  }
+
+  function bindShowSecretsToggle() {
+    const btn = document.getElementById("show-secrets-btn");
+    if (!btn) return;
+
+    // The initial state was already applied to <html> by the inline
+    // pre-paint script in index.html, but read it back so the button
+    // label / aria-pressed are correct.
+    const sync = () => {
+      const on = document.documentElement.classList.contains("show-secrets");
+      btn.setAttribute("aria-pressed", String(on));
+      btn.textContent = on ? "Hide secret rows" : "Show secret rows";
+    };
+    sync();
+
+    btn.addEventListener("click", () => {
+      const on = !document.documentElement.classList.contains("show-secrets");
+      document.documentElement.classList.toggle("show-secrets", on);
+      saveBool(SHOW_SECRETS_KEY, on);
+      sync();
+    });
+  }
+
   // ---------- Header actions ----------
 
   function bindHeaderActions() {
@@ -412,8 +490,6 @@
 
         collection = {};
         saveCollection();
-        openSecrets.clear();
-        saveStringSet(SET_SECRET_OPEN_KEY, openSecrets);
         render();
 
         if (alsoWipeCloud) {
@@ -471,6 +547,9 @@
       }
       return;
     }
+    setupHeaderHeightVar();
+    bindThemeToggle();
+    bindShowSecretsToggle();
     render();
     bindHeaderActions();
   });
