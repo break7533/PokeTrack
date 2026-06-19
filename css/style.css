@@ -578,19 +578,11 @@ html[data-theme="dark"] .era__chevron {
   /* The <img> variant fills the box but preserves aspect ratio. */
   padding: 3px;
   object-fit: contain;
-  /* The container's font-size/line-height aren't relevant for images,
-     but we keep the same box rules from .set__symbol so layout is stable. */
+  filter: drop-shadow(0 0 1px rgba(0, 0, 0, 0.5));
 }
 
-/*
-  Most expansion symbols are dark silhouettes on a transparent
-  background, which would essentially disappear against the dark
-  surface. Invert in dark mode so they read as light-on-dark.
-  Only applies to the <img> variant — the emoji fallback should
-  stay its natural color.
-*/
 html[data-theme="dark"] .set__symbol--img {
-  filter: invert(0.92) hue-rotate(180deg);
+  filter: invert(0.92) hue-rotate(180deg) drop-shadow(0 0 1px rgba(255, 255, 255, 0.5));
 }
 
 .set__row--base {
