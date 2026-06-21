@@ -429,10 +429,10 @@
         tr.innerHTML = `
           <td>${escapeHtml(set.name)}</td>
           <td class="hide-mobile">${set.baseCollected} / ${set.baseTotal}</td>
-          <td class="${pctColorClass(set.basePct)}" data-detail="${set.baseCollected} / ${set.baseTotal}">${set.basePct}%</td>
+          <td class="${pctColorClass(set.basePct)}" data-detail="${set.baseCollected} / ${set.baseTotal}" tabindex="0">${set.basePct}%</td>
           <td class="hide-mobile">${set.secretTotal > 0 ? set.secretCollected + " / " + set.secretTotal : "—"}</td>
-          <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}" ${set.secretTotal > 0 ? 'data-detail="' + set.secretCollected + ' / ' + set.secretTotal + '"' : ''}>${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
-          <td class="era-detail__total-cell" data-detail="${set.totalCollected} / ${set.totalCards}">
+          <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}" ${set.secretTotal > 0 ? 'data-detail="' + set.secretCollected + ' / ' + set.secretTotal + '" tabindex="0"' : ''}>${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
+          <td class="era-detail__total-cell" data-detail="${set.totalCollected} / ${set.totalCards}" tabindex="0">
             <strong class="${pctColorClass(set.totalPct)}">${set.totalPct}%</strong>
             <span class="mini-bar"><span class="mini-bar__fill" style="width:${set.totalPct}%;background:${barColor}"></span></span>
           </td>

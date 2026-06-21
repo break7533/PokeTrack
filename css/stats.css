@@ -509,6 +509,14 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
     cursor: pointer;
     -webkit-user-select: none;
     user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  [data-detail]::selection {
+    background: transparent;
+  }
+  [data-detail]:focus {
+    outline: none;
   }
   [data-detail]::after {
     content: attr(data-detail);
