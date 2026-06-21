@@ -507,6 +507,8 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
   [data-detail] {
     position: relative;
     cursor: pointer;
+    -webkit-user-select: none;
+    user-select: none;
   }
   [data-detail]::after {
     content: attr(data-detail);
