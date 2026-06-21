@@ -725,10 +725,38 @@
 
   // ---------- Header actions ----------
 
+  function exportCSV() {
+    const rows = [["Era", "Set", "Base Collected", "Base Total", "Secret Collected", "Secret Total"]];
+    POKEMON_TCG_ERAS.forEach((era) => {
+      era.sets.forEach((set) => {
+        const counts = collection[set.id] || {};
+        rows.push([
+          era.name,
+          set.name,
+          (counts.base | 0).toString(),
+          set.base.toString(),
+          (counts.secret | 0).toString(),
+          set.secret.toString()
+        ]);
+      });
+    });
+    const csv = rows.map((r) => r.map((f) => '"' + f.replace(/"/g, '""') + '"').join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "poketrack-export.csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function bindHeaderActions() {
     const expandBtn = document.getElementById("expand-all-btn");
     const collapseBtn = document.getElementById("collapse-all-btn");
     const resetBtn = document.getElementById("reset-btn");
+    const exportBtn = document.getElementById("export-csv-btn");
 
     if (expandBtn) {
       expandBtn.addEventListener("click", () => {
@@ -783,6 +811,10 @@
           try { await window.wipeCloudCollection(); } catch (_) { /* surfaced in firebase.js */ }
         }
       });
+    }
+
+    if (exportBtn) {
+      exportBtn.addEventListener("click", exportCSV);
     }
   }
 
