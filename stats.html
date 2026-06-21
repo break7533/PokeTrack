@@ -133,6 +133,27 @@
       </div>
     </section>
 
+    <!-- Growth -->
+    <section class="stats-section" aria-label="Collection growth">
+      <div class="stats-section__header">
+        <h2 class="stats-section__title">Growth</h2>
+        <div class="range-toggle" id="range-toggle">
+          <button type="button" class="range-btn range-btn--active" data-range="1">1D</button>
+          <button type="button" class="range-btn" data-range="7">7D</button>
+          <button type="button" class="range-btn" data-range="30">30D</button>
+        </div>
+      </div>
+      <div class="growth-summary" id="growth-summary">
+        <span class="growth-summary__value" id="growth-value">+0</span>
+        <span class="growth-summary__label">cards added</span>
+      </div>
+      <div class="chart-container chart-container--growth">
+        <canvas id="chart-growth"></canvas>
+      </div>
+      <div id="growth-movers"></div>
+      <p class="growth-note" id="growth-note"></p>
+    </section>
+
     <!-- Per-Era Detail Tables -->
     <section class="stats-section" aria-label="Per-era details" id="era-details">
       <h2 class="stats-section__title">Era Breakdown</h2>

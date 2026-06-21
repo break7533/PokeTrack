@@ -32,7 +32,14 @@ import {
   getFirestore,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  collection as firestoreCollection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  orderBy,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ---------- Config (replaced at deploy time) ----------
@@ -120,6 +127,90 @@ window.isSignedInToCloud = function () {
   return Boolean(currentUser && db);
 };
 
+/**
+ * Manual history sync — push local unsynced entries to Firestore, pull
+ * entries from other devices. Returns { pushed, pulled }.
+ */
+window.syncHistoryToCloud = async function () {
+  if (!currentUser || !db) throw new Error("Not signed in");
+
+  const localHistory = window.getLocalHistory ? window.getLocalHistory() : [];
+  const lastSynced = window.getHistorySyncedAt ? window.getHistorySyncedAt() : 0;
+
+  // 1. Push local entries newer than last sync
+  const toPush = localHistory.filter((e) => e.at > lastSynced);
+  const histRef = firestoreCollection(db, "users", currentUser.uid, "history");
+
+  if (toPush.length > 0) {
+    // Use batched writes (max 500 per batch)
+    for (let i = 0; i < toPush.length; i += 450) {
+      const batch = writeBatch(db);
+      const chunk = toPush.slice(i, i + 450);
+      chunk.forEach((entry) => {
+        const docRef = doc(histRef);
+        batch.set(docRef, entry);
+      });
+      await batch.commit();
+    }
+  }
+
+  // 2. Pull entries from cloud that are newer than last sync (from other devices)
+  let pulled = 0;
+  try {
+    const q = lastSynced > 0
+      ? query(histRef, where("at", ">", lastSynced), orderBy("at", "asc"))
+      : query(histRef, orderBy("at", "asc"));
+    const snapshot = await getDocs(q);
+    const cloudEntries = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data && data.set && data.at) cloudEntries.push(data);
+    });
+    if (cloudEntries.length > 0 && typeof window.mergeHistoryFromCloud === "function") {
+      pulled = window.mergeHistoryFromCloud(cloudEntries) || 0;
+    }
+  } catch (e) {
+    console.warn("PokéTrack: failed to pull cloud history", e.message || e);
+  }
+
+  // 3. Mark sync timestamp
+  const now = Date.now();
+  if (typeof window.markHistorySynced === "function") {
+    window.markHistorySynced(now);
+  }
+
+  return { pushed: toPush.length, pulled: pulled };
+};
+
+/**
+ * Load full history from cloud (used by stats page).
+ * Merges cloud entries into local storage and returns the combined array.
+ */
+window.loadHistoryFromCloud = async function () {
+  if (!currentUser || !db) return [];
+
+  try {
+    const histRef = firestoreCollection(db, "users", currentUser.uid, "history");
+    // Only load last 90 days
+    const cutoff = Date.now() - (90 * 24 * 60 * 60 * 1000);
+    const q = query(histRef, where("at", ">", cutoff), orderBy("at", "asc"));
+    const snapshot = await getDocs(q);
+    const cloudEntries = [];
+    snapshot.forEach((docSnap) => {
+      const data = docSnap.data();
+      if (data && data.set && data.at) cloudEntries.push(data);
+    });
+    // Merge into local
+    if (cloudEntries.length > 0 && typeof window.mergeHistoryFromCloud === "function") {
+      window.mergeHistoryFromCloud(cloudEntries);
+    }
+    return window.getLocalHistory ? window.getLocalHistory() : [];
+  } catch (e) {
+    console.warn("PokéTrack: failed to load cloud history", e.message || e);
+    return window.getLocalHistory ? window.getLocalHistory() : [];
+  }
+};
+
 // ---------- Internals ----------
 
 async function loadFromCloud(uid) {
@@ -143,9 +234,12 @@ async function loadFromCloud(uid) {
 }
 
 /**
- * Merge cloud + local, taking the higher count for each (set, kind).
- * This way, signing in on a new browser won't blow away progress, and a fresh
- * device pulling cloud data won't lose anything entered locally first.
+ * Merge cloud + local using last-write-wins per set/kind.
+ * Each entry can have `baseAt` / `secretAt` timestamps. The side with the
+ * more recent timestamp wins for that field. If no timestamp exists (legacy
+ * data), the value is treated as infinitely old so any timestamped entry wins.
+ * As a fallback (both sides lack timestamps), take the higher value to avoid
+ * accidental data loss.
  */
 function mergeCollections(local, cloud) {
   const out = {};
@@ -154,12 +248,37 @@ function mergeCollections(local, cloud) {
     ...Object.keys(cloud || {})
   ]);
   allIds.forEach((id) => {
-    const l = (local && local[id]) || { base: 0, secret: 0 };
-    const c = (cloud && cloud[id]) || { base: 0, secret: 0 };
-    out[id] = {
-      base: Math.max(l.base | 0, c.base | 0),
-      secret: Math.max(l.secret | 0, c.secret | 0)
-    };
+    const l = (local && local[id]) || {};
+    const c = (cloud && cloud[id]) || {};
+
+    const lBaseAt = l.baseAt || 0;
+    const cBaseAt = c.baseAt || 0;
+    const lSecretAt = l.secretAt || 0;
+    const cSecretAt = c.secretAt || 0;
+
+    let base, baseAt, secret, secretAt;
+
+    // Base: last-write-wins, fallback to max if no timestamps
+    if (lBaseAt || cBaseAt) {
+      if (lBaseAt >= cBaseAt) { base = l.base | 0; baseAt = lBaseAt; }
+      else { base = c.base | 0; baseAt = cBaseAt; }
+    } else {
+      base = Math.max(l.base | 0, c.base | 0);
+      baseAt = 0;
+    }
+
+    // Secret: last-write-wins, fallback to max if no timestamps
+    if (lSecretAt || cSecretAt) {
+      if (lSecretAt >= cSecretAt) { secret = l.secret | 0; secretAt = lSecretAt; }
+      else { secret = c.secret | 0; secretAt = cSecretAt; }
+    } else {
+      secret = Math.max(l.secret | 0, c.secret | 0);
+      secretAt = 0;
+    }
+
+    out[id] = { base, secret };
+    if (baseAt) out[id].baseAt = baseAt;
+    if (secretAt) out[id].secretAt = secretAt;
   });
   return out;
 }

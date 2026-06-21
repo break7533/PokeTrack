@@ -873,6 +873,52 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
   height: 6px;
 }
 
+/* ---------- Toast notifications ---------- */
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%) translateY(10px);
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  font-size: 0.85rem;
+  font-weight: 600;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+  pointer-events: none;
+  max-width: calc(100vw - 2rem);
+  text-align: center;
+}
+.toast--visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.toast--success {
+  border-color: var(--progress-high);
+  color: var(--progress-high);
+}
+.toast--error {
+  border-color: var(--progress-low);
+  color: var(--progress-low);
+}
+
+.btn--success {
+  background: var(--progress-high) !important;
+  color: #fff !important;
+  border-color: var(--progress-high) !important;
+}
+.btn--error {
+  background: var(--progress-low) !important;
+  color: #fff !important;
+  border-color: var(--progress-low) !important;
+}
+
 /* ---------- Footer ---------- */
 
 .site-footer {

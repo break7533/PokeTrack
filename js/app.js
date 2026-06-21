@@ -23,6 +23,8 @@
   const ERA_COLLAPSED_KEY = "poketrack:collapsed-eras:v1";
   const SHOW_SECRETS_KEY = "poketrack:show-secrets:v1";
   const THEME_KEY = "poketrack:theme:v1";
+  const HISTORY_KEY = "poketrack:history:v1";
+  const HISTORY_SYNCED_KEY = "poketrack:history-synced-at:v1";
 
   // Cache Storage API namespace + TTL for set-symbol images. Bumping the
   // version (v1 -> v2) on a future change will invalidate every entry.
@@ -107,6 +109,41 @@
     } catch (_) { /* ignore */ }
   }
 
+  // ---------- History (change log) ----------
+
+  const HISTORY_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000; // 90 days
+
+  function loadHistory() {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function saveHistory(history) {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    } catch (_) { /* ignore */ }
+  }
+
+  /**
+   * Append a change entry to the local history log.
+   * Prunes entries older than 90 days to keep localStorage lean.
+   */
+  function appendHistory(setId, kind, from, to) {
+    if (from === to) return; // no actual change
+    const history = loadHistory();
+    history.push({ set: setId, kind: kind, from: from, to: to, at: Date.now() });
+    // Prune old entries
+    const cutoff = Date.now() - HISTORY_MAX_AGE_MS;
+    const pruned = history.filter((e) => e.at > cutoff);
+    saveHistory(pruned);
+  }
+
   // ---------- Helpers ----------
 
   function clamp(value, min, max) {
@@ -125,6 +162,7 @@
   function setCollected(setId, kind, value) {
     if (!collection[setId]) collection[setId] = { base: 0, secret: 0 };
     collection[setId][kind] = value;
+    collection[setId][kind + "At"] = Date.now();
     saveCollection();
     // Cloud sync hook — no-op if firebase.js isn't loaded or user is signed out.
     // Skipped while we're applying a cloud snapshot to avoid an echo write.
@@ -360,13 +398,27 @@
 
     baseInput.addEventListener("input", triggerBaseUpdate);
 
+    // History: capture value on focus, log delta on blur
+    baseInput.addEventListener("focus", () => {
+      baseInput.dataset.focusValue = baseInput.value;
+    });
+    baseInput.addEventListener("blur", () => {
+      const before = parseInt(baseInput.dataset.focusValue, 10) || 0;
+      const after = clamp(parseInt(baseInput.value, 10), 0, set.base);
+      appendHistory(set.id, "base", before, after);
+    });
+
     baseRow.querySelector(".set__step--minus").addEventListener("click", () => {
-      baseInput.value = String(clamp((parseInt(baseInput.value, 10) || 0) - 1, 0, set.base));
+      const before = parseInt(baseInput.value, 10) || 0;
+      baseInput.value = String(clamp(before - 1, 0, set.base));
       triggerBaseUpdate();
+      appendHistory(set.id, "base", before, clamp(before - 1, 0, set.base));
     });
     baseRow.querySelector(".set__step--plus").addEventListener("click", () => {
-      baseInput.value = String(clamp((parseInt(baseInput.value, 10) || 0) + 1, 0, set.base));
+      const before = parseInt(baseInput.value, 10) || 0;
+      baseInput.value = String(clamp(before + 1, 0, set.base));
       triggerBaseUpdate();
+      appendHistory(set.id, "base", before, clamp(before + 1, 0, set.base));
     });
 
     // ----- Secret row -----
@@ -390,13 +442,27 @@
 
       secretInput.addEventListener("input", triggerSecretUpdate);
 
+      // History: capture value on focus, log delta on blur
+      secretInput.addEventListener("focus", () => {
+        secretInput.dataset.focusValue = secretInput.value;
+      });
+      secretInput.addEventListener("blur", () => {
+        const before = parseInt(secretInput.dataset.focusValue, 10) || 0;
+        const after = clamp(parseInt(secretInput.value, 10), 0, set.secret);
+        appendHistory(set.id, "secret", before, after);
+      });
+
       secretRow.querySelector(".set__step--minus").addEventListener("click", () => {
-        secretInput.value = String(clamp((parseInt(secretInput.value, 10) || 0) - 1, 0, set.secret));
+        const before = parseInt(secretInput.value, 10) || 0;
+        secretInput.value = String(clamp(before - 1, 0, set.secret));
         triggerSecretUpdate();
+        appendHistory(set.id, "secret", before, clamp(before - 1, 0, set.secret));
       });
       secretRow.querySelector(".set__step--plus").addEventListener("click", () => {
-        secretInput.value = String(clamp((parseInt(secretInput.value, 10) || 0) + 1, 0, set.secret));
+        const before = parseInt(secretInput.value, 10) || 0;
+        secretInput.value = String(clamp(before + 1, 0, set.secret));
         triggerSecretUpdate();
+        appendHistory(set.id, "secret", before, clamp(before + 1, 0, set.secret));
       });
     } else {
       // No secrets for this set — strip the secret row entirely so it
@@ -723,6 +789,24 @@
     });
   }
 
+  // ---------- Toast notifications ----------
+
+  function showToast(message, type, duration) {
+    duration = duration || 3000;
+    const toast = document.createElement("div");
+    toast.className = "toast toast--" + (type || "info");
+    toast.textContent = message;
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+    // Trigger animation
+    requestAnimationFrame(() => toast.classList.add("toast--visible"));
+    setTimeout(() => {
+      toast.classList.remove("toast--visible");
+      setTimeout(() => toast.remove(), 300);
+    }, duration);
+  }
+
   // ---------- Header actions ----------
 
   function exportCSV() {
@@ -757,6 +841,7 @@
     const collapseBtn = document.getElementById("collapse-all-btn");
     const resetBtn = document.getElementById("reset-btn");
     const exportBtn = document.getElementById("export-csv-btn");
+    const syncBtn = document.getElementById("sync-history-btn");
 
     if (expandBtn) {
       expandBtn.addEventListener("click", () => {
@@ -805,6 +890,7 @@
 
         collection = {};
         saveCollection();
+        saveHistory([]);
         render();
 
         if (alsoWipeCloud) {
@@ -816,17 +902,56 @@
     if (exportBtn) {
       exportBtn.addEventListener("click", exportCSV);
     }
+
+    if (syncBtn) {
+      syncBtn.addEventListener("click", async () => {
+        // Check sign-in
+        if (typeof window.isSignedInToCloud !== "function" || !window.isSignedInToCloud()) {
+          showToast("Sign in first to sync history across devices", "error");
+          return;
+        }
+        if (typeof window.syncHistoryToCloud !== "function") {
+          showToast("Cloud sync is not configured", "error");
+          return;
+        }
+
+        // Button state: syncing
+        syncBtn.disabled = true;
+        const originalText = syncBtn.textContent;
+        syncBtn.textContent = "Syncing...";
+
+        try {
+          const result = await window.syncHistoryToCloud();
+          syncBtn.textContent = "Synced!";
+          syncBtn.classList.add("btn--success");
+          const msg = `+${result.pushed} uploaded, ${result.pulled} pulled from cloud`;
+          showToast(msg, "success");
+        } catch (e) {
+          syncBtn.textContent = "Sync failed";
+          syncBtn.classList.add("btn--error");
+          showToast("Sync failed: " + (e.message || "unknown error"), "error");
+        }
+
+        setTimeout(() => {
+          syncBtn.disabled = false;
+          syncBtn.textContent = originalText;
+          syncBtn.classList.remove("btn--success", "btn--error");
+        }, 2000);
+      });
+    }
   }
 
   // ---------- Cloud-sync bridge (called by firebase.js) ----------
 
-  /** Read-only accessor for the in-memory collection. */
+  /** Read-only accessor for the in-memory collection (includes timestamps). */
   window.getLocalCollection = function () {
     // Return a shallow copy so callers can't mutate our state by accident
     const out = {};
     Object.keys(collection).forEach((k) => {
       const v = collection[k] || {};
       out[k] = { base: v.base | 0, secret: v.secret | 0 };
+      if (v.baseAt) out[k].baseAt = v.baseAt;
+      if (v.secretAt) out[k].secretAt = v.secretAt;
     });
     return out;
   };
@@ -845,6 +970,8 @@
       Object.keys(merged).forEach((k) => {
         const v = merged[k] || {};
         collection[k] = { base: v.base | 0, secret: v.secret | 0 };
+        if (v.baseAt) collection[k].baseAt = v.baseAt;
+        if (v.secretAt) collection[k].secretAt = v.secretAt;
       });
       saveCollection();
       refreshAllInputs();
@@ -852,6 +979,50 @@
     } finally {
       applyingCloudSnapshot = false;
     }
+  };
+
+  // ---------- History API (for firebase.js and stats.js) ----------
+
+  /** Return the full local history array (read-only copy). */
+  window.getLocalHistory = function () {
+    return loadHistory().slice();
+  };
+
+  /** Return the timestamp of the last successful cloud sync. */
+  window.getHistorySyncedAt = function () {
+    try {
+      return parseInt(localStorage.getItem(HISTORY_SYNCED_KEY), 10) || 0;
+    } catch (_) { return 0; }
+  };
+
+  /** Update the last-synced timestamp after a successful cloud sync. */
+  window.markHistorySynced = function (timestamp) {
+    try {
+      localStorage.setItem(HISTORY_SYNCED_KEY, String(timestamp));
+    } catch (_) { /* ignore */ }
+  };
+
+  /** Merge cloud history entries into local storage (for pull from other devices). */
+  window.mergeHistoryFromCloud = function (cloudEntries) {
+    if (!Array.isArray(cloudEntries) || cloudEntries.length === 0) return;
+    const local = loadHistory();
+    // Deduplicate by set+kind+at key
+    const existing = new Set(local.map((e) => e.set + "|" + e.kind + "|" + e.at));
+    let added = 0;
+    cloudEntries.forEach((e) => {
+      const key = e.set + "|" + e.kind + "|" + e.at;
+      if (!existing.has(key)) {
+        local.push(e);
+        existing.add(key);
+        added++;
+      }
+    });
+    if (added > 0) {
+      // Prune old entries
+      const cutoff = Date.now() - HISTORY_MAX_AGE_MS;
+      saveHistory(local.filter((e) => e.at > cutoff));
+    }
+    return added;
   };
 
   // ---------- Boot ----------

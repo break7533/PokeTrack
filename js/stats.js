@@ -484,6 +484,260 @@
     }
   }
 
+  // ---------- Growth section ----------
+
+  let growthChart = null;
+  let currentRange = 7; // default to 7 days
+  let historyData = [];
+
+  function loadLocalHistory() {
+    try {
+      const raw = localStorage.getItem("poketrack:history:v1");
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function filterHistoryByRange(history, days) {
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    return history.filter((e) => e.at > cutoff);
+  }
+
+  function computeGrowth(history) {
+    // Net cards added
+    let net = 0;
+    history.forEach((e) => { net += (e.to - e.from); });
+
+    // Per-day buckets
+    const dayMap = {};
+    history.forEach((e) => {
+      const day = new Date(e.at).toISOString().slice(0, 10);
+      dayMap[day] = (dayMap[day] || 0) + (e.to - e.from);
+    });
+
+    // Fill in missing days for the chart
+    const days = [];
+    const values = [];
+    if (Object.keys(dayMap).length > 0) {
+      const sortedDays = Object.keys(dayMap).sort();
+      const start = new Date(sortedDays[0]);
+      const end = new Date();
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        days.push(key);
+        values.push(dayMap[key] || 0);
+      }
+    }
+
+    // Top movers (group by set)
+    const setMap = {};
+    history.forEach((e) => {
+      if (!setMap[e.set]) setMap[e.set] = { base: 0, secret: 0 };
+      setMap[e.set][e.kind] += (e.to - e.from);
+    });
+    const movers = Object.keys(setMap).map((id) => ({
+      id,
+      name: getSetName(id),
+      base: setMap[id].base,
+      secret: setMap[id].secret,
+      total: setMap[id].base + setMap[id].secret
+    }));
+    movers.sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
+
+    return { net, days, values, movers: movers.slice(0, 10) };
+  }
+
+  function getSetName(setId) {
+    for (const era of POKEMON_TCG_ERAS) {
+      const found = era.sets.find((s) => s.id === setId);
+      if (found) return found.name;
+    }
+    return setId;
+  }
+
+  function renderGrowth(history, range) {
+    const filtered = filterHistoryByRange(history, range);
+    const growth = computeGrowth(filtered);
+    const colors = getThemeColors();
+
+    renderGrowthSummary(growth);
+    renderGrowthChart(growth, colors);
+    renderGrowthMovers(growth);
+    renderGrowthNote(history);
+  }
+
+  function renderGrowthSummary(growth) {
+    const valueEl = document.getElementById("growth-value");
+    if (!valueEl) return;
+
+    const prefix = growth.net > 0 ? "+" : "";
+    valueEl.textContent = prefix + growth.net;
+    valueEl.classList.remove("growth-summary__value--positive", "growth-summary__value--negative", "growth-summary__value--zero");
+    if (growth.net > 0) valueEl.classList.add("growth-summary__value--positive");
+    else if (growth.net < 0) valueEl.classList.add("growth-summary__value--negative");
+    else valueEl.classList.add("growth-summary__value--zero");
+  }
+
+  function renderGrowthChart(growth, colors) {
+    const ctx = document.getElementById("chart-growth");
+    if (!ctx) return;
+
+    if (growth.days.length === 0) {
+      // No data — hide chart, show empty message
+      ctx.style.display = "none";
+      const container = ctx.closest(".chart-container--growth");
+      if (container && !container.querySelector(".growth-empty")) {
+        const msg = document.createElement("p");
+        msg.className = "growth-empty";
+        msg.textContent = "No activity recorded yet. Changes will appear here as you update your collection.";
+        container.appendChild(msg);
+      }
+      return;
+    }
+
+    ctx.style.display = "";
+    // Remove any empty message
+    const emptyMsg = ctx.closest(".chart-container--growth").querySelector(".growth-empty");
+    if (emptyMsg) emptyMsg.remove();
+
+    // Format labels as shorter dates
+    const labels = growth.days.map((d) => {
+      const date = new Date(d + "T00:00:00");
+      return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    });
+
+    const barColors = growth.values.map((v) => v >= 0 ? colors.progressHigh + "CC" : colors.red + "CC");
+    const borderColors = growth.values.map((v) => v >= 0 ? colors.progressHigh : colors.red);
+
+    const data = {
+      labels,
+      datasets: [{
+        label: "Cards added",
+        data: growth.values,
+        backgroundColor: barColors,
+        borderColor: borderColors,
+        borderWidth: 1,
+        borderRadius: 3
+      }]
+    };
+
+    const options = {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: {
+          ticks: { color: colors.textMuted, font: { size: 10 }, maxRotation: 45 },
+          grid: { display: false }
+        },
+        y: {
+          beginAtZero: true,
+          ticks: { color: colors.textMuted, precision: 0 },
+          grid: { color: colors.border + "44" }
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const v = ctx.raw;
+              return (v >= 0 ? "+" : "") + v + " cards";
+            }
+          }
+        }
+      }
+    };
+
+    if (growthChart) {
+      growthChart.data = data;
+      growthChart.options = options;
+      growthChart.update();
+    } else {
+      growthChart = new Chart(ctx, { type: "bar", data, options });
+    }
+  }
+
+  function renderGrowthMovers(growth) {
+    const container = document.getElementById("growth-movers");
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (growth.movers.length === 0) return;
+
+    const title = document.createElement("h3");
+    title.className = "growth-movers__title";
+    title.textContent = "Top Movers";
+    container.appendChild(title);
+
+    const table = document.createElement("table");
+    table.className = "growth-movers__table";
+    table.innerHTML = `<thead><tr>
+      <th>Set</th>
+      <th>Base</th>
+      <th>Secret</th>
+      <th>Net</th>
+    </tr></thead>`;
+
+    const tbody = document.createElement("tbody");
+    growth.movers.forEach((m) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(m.name)}</td>
+        <td class="${deltaClass(m.base)}">${formatDelta(m.base)}</td>
+        <td class="${deltaClass(m.secret)}">${formatDelta(m.secret)}</td>
+        <td class="${deltaClass(m.total)}"><strong>${formatDelta(m.total)}</strong></td>
+      `;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    container.appendChild(table);
+  }
+
+  function formatDelta(n) {
+    if (n === 0) return "—";
+    return (n > 0 ? "+" : "") + n;
+  }
+
+  function deltaClass(n) {
+    if (n > 0) return "growth-movers__delta--positive";
+    if (n < 0) return "growth-movers__delta--negative";
+    return "";
+  }
+
+  function renderGrowthNote(history) {
+    const el = document.getElementById("growth-note");
+    if (!el) return;
+    if (history.length === 0) {
+      el.textContent = "";
+      return;
+    }
+    const earliest = history.reduce((min, e) => e.at < min ? e.at : min, history[0].at);
+    const date = new Date(earliest).toLocaleDateString(undefined, {
+      year: "numeric", month: "short", day: "numeric"
+    });
+    el.textContent = "Tracking since " + date + ". Sync across devices using the Sync button on the tracker page.";
+  }
+
+  function bindRangeToggle() {
+    const container = document.getElementById("range-toggle");
+    if (!container) return;
+
+    container.addEventListener("click", (e) => {
+      const btn = e.target.closest(".range-btn");
+      if (!btn) return;
+      const range = parseInt(btn.dataset.range, 10);
+      if (!range) return;
+
+      currentRange = range;
+      container.querySelectorAll(".range-btn").forEach((b) => b.classList.remove("range-btn--active"));
+      btn.classList.add("range-btn--active");
+      renderGrowth(historyData, currentRange);
+    });
+  }
+
   // ---------- Boot ----------
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -505,5 +759,10 @@
     renderSummary(currentStats);
     renderCharts(currentStats);
     renderEraDetails(currentStats);
+
+    // Growth section
+    historyData = loadLocalHistory();
+    bindRangeToggle();
+    renderGrowth(historyData, currentRange);
   });
 })();
