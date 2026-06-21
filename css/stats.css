@@ -1,0 +1,308 @@
+/* ============================================================
+   PokéTrack — Stats page styles
+   ============================================================ */
+
+/* Page title badge */
+.site-title__page {
+  font-size: 0.7em;
+  font-weight: 600;
+  background: var(--color-yellow);
+  color: var(--color-blue-dark);
+  padding: 0.15em 0.5em;
+  border-radius: var(--radius-sm);
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+/* Nav link in header */
+.nav-link {
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
+/* Main content area */
+.stats-main {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+/* ---------- Sections ---------- */
+
+.stats-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.stats-section__title {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+/* ---------- Overview grid ---------- */
+
+.stats-overview {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.stats-overview__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.stats-overview__chart {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Reuse stat-card styles from main CSS; override colours for stats page context */
+.stats-section .stat-card {
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+.stats-section .stat-card .stat-label {
+  color: var(--color-text-muted);
+}
+.stats-section .stat-card .stat-value {
+  color: var(--color-text);
+}
+.stats-section .stat-card .stat-divider {
+  color: var(--color-text-muted);
+}
+.stats-section .stat-card .stat-percent {
+  color: var(--color-text-muted);
+}
+
+/* ---------- Milestones ---------- */
+
+.milestones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.milestone {
+  text-align: center;
+  padding: 0.75rem 0.5rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.milestone__value {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.milestone__label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 0.25rem;
+}
+
+/* ---------- Chart containers ---------- */
+
+.chart-container--bar {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+}
+
+.chart-container--bar canvas {
+  width: 100% !important;
+}
+
+/* ---------- Era detail tables ---------- */
+
+.era-detail {
+  margin-bottom: 1.5rem;
+}
+.era-detail:last-child {
+  margin-bottom: 0;
+}
+
+.era-detail__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--era-accent, var(--color-border));
+}
+
+/* Inherit era accent colours for detail sections */
+.era-detail[data-era-id="mega-evolution"] { --era-accent: #8B5CF6; }
+.era-detail[data-era-id="scarlet-violet"] { --era-accent: #EF4444; }
+.era-detail[data-era-id="sword-shield"]   { --era-accent: #3B82F6; }
+.era-detail[data-era-id="sun-moon"]       { --era-accent: #F59E0B; }
+.era-detail[data-era-id="xy"]             { --era-accent: #06B6D4; }
+.era-detail[data-era-id="black-white"]    { --era-accent: #6B7280; }
+.era-detail[data-era-id="hgss"]           { --era-accent: #EAB308; }
+.era-detail[data-era-id="platinum"]       { --era-accent: #94A3B8; }
+.era-detail[data-era-id="diamond-pearl"]  { --era-accent: #8B5CF6; }
+.era-detail[data-era-id="ex"]             { --era-accent: #10B981; }
+.era-detail[data-era-id="e-card"]         { --era-accent: #F97316; }
+.era-detail[data-era-id="legendary-collection"] { --era-accent: #DC2626; }
+.era-detail[data-era-id="neo"]            { --era-accent: #14B8A6; }
+.era-detail[data-era-id="base"]           { --era-accent: #FFCB05; }
+.era-detail[data-era-id="other"]          { --era-accent: #78716C; }
+
+.era-detail__name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.era-detail__percent {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.era-detail__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.era-detail__table th {
+  text-align: left;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.era-detail__table th:not(:first-child) {
+  text-align: right;
+}
+
+.era-detail__table td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid var(--color-border);
+  font-variant-numeric: tabular-nums;
+}
+
+.era-detail__table td:not(:first-child) {
+  text-align: right;
+}
+
+.era-detail__table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.era-detail__table tbody tr:hover {
+  background: var(--color-surface-alt);
+}
+
+/* Row status colours */
+.era-detail__table tr[data-status="complete"] td:first-child {
+  color: var(--progress-complete);
+  font-weight: 700;
+}
+
+.era-detail__table tr[data-status="started"] td:first-child {
+  color: var(--color-text);
+}
+
+.era-detail__table tr[data-status="untouched"] {
+  opacity: 0.55;
+}
+
+/* Per-row mini progress bar */
+.mini-bar {
+  display: inline-block;
+  width: 50px;
+  height: 6px;
+  background: var(--progress-track);
+  border-radius: 999px;
+  overflow: hidden;
+  vertical-align: middle;
+  margin-left: 0.4rem;
+}
+
+.mini-bar__fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 720px) {
+  .stats-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .stats-overview__chart {
+    justify-content: center;
+  }
+
+  .stats-overview__chart canvas {
+    max-width: 180px;
+    max-height: 180px;
+  }
+
+  .chart-container--bar {
+    min-height: 250px;
+  }
+
+  .milestones {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .era-detail__table {
+    font-size: 0.78rem;
+  }
+
+  .era-detail__table th,
+  .era-detail__table td {
+    padding: 0.4rem 0.35rem;
+  }
+
+  .mini-bar {
+    width: 36px;
+  }
+}
+
+@media (max-width: 420px) {
+  .stats-section {
+    padding: 1rem;
+  }
+
+  .milestones {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stats-overview__cards {
+    grid-template-columns: 1fr;
+  }
+}

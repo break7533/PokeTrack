@@ -403,6 +403,11 @@ button {
   border-color: #c81212;
 }
 
+.nav-link {
+  text-decoration: none;
+  font-size: 0.82rem;
+}
+
 /* ---------- Main / Eras ---------- */
 
 main {

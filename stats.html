@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéTrack — Collection Statistics</title>
+  <meta name="description" content="Detailed statistics and charts for your Pokémon TCG collection." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/stats.css" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("poketrack:theme:v1");
+        if (saved !== "light") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="site-header__top">
+        <h1 class="site-title">
+          <span class="logo-mark">⚡</span> PokéTrack
+          <span class="site-title__page">Stats</span>
+        </h1>
+
+        <div class="site-header__actions">
+          <a href="index.html" class="btn btn--ghost nav-link">
+            <span aria-hidden="true">←</span> Tracker
+          </a>
+          <button
+            type="button"
+            id="theme-btn"
+            class="icon-btn"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            <span class="icon-btn__icon" aria-hidden="true">🌙</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container stats-main">
+    <noscript>
+      <p class="error">PokéTrack requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </noscript>
+
+    <!-- Overall Summary -->
+    <section class="stats-section" aria-label="Overall collection summary">
+      <h2 class="stats-section__title">Overall Progress</h2>
+      <div class="stats-overview">
+        <div class="stats-overview__cards">
+          <div class="stat-card stat-card--base">
+            <div class="stat-label">Base Cards</div>
+            <div class="stat-value">
+              <span id="stat-base-collected">0</span>
+              <span class="stat-divider">/</span>
+              <span id="stat-base-total">0</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar__fill" id="stat-base-bar" style="width:0%"></div>
+            </div>
+            <div class="stat-percent"><span id="stat-base-percent">0</span>%</div>
+          </div>
+
+          <div class="stat-card stat-card--secret">
+            <div class="stat-label">Secret Cards</div>
+            <div class="stat-value">
+              <span id="stat-secret-collected">0</span>
+              <span class="stat-divider">/</span>
+              <span id="stat-secret-total">0</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar__fill" id="stat-secret-bar" style="width:0%"></div>
+            </div>
+            <div class="stat-percent"><span id="stat-secret-percent">0</span>%</div>
+          </div>
+
+          <div class="stat-card stat-card--total">
+            <div class="stat-label">Total Collection</div>
+            <div class="stat-value">
+              <span id="stat-total-collected">0</span>
+              <span class="stat-divider">/</span>
+              <span id="stat-total-total">0</span>
+            </div>
+            <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <div class="progress-bar__fill" id="stat-total-bar" style="width:0%"></div>
+            </div>
+            <div class="stat-percent"><span id="stat-total-percent">0</span>%</div>
+          </div>
+        </div>
+
+        <div class="stats-overview__chart">
+          <canvas id="chart-overall-doughnut" width="220" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Milestones -->
+      <div class="milestones">
+        <div class="milestone">
+          <span class="milestone__value" id="milestone-complete">0</span>
+          <span class="milestone__label">Sets Complete</span>
+        </div>
+        <div class="milestone">
+          <span class="milestone__value" id="milestone-started">0</span>
+          <span class="milestone__label">Sets Started</span>
+        </div>
+        <div class="milestone">
+          <span class="milestone__value" id="milestone-untouched">0</span>
+          <span class="milestone__label">Sets Untouched</span>
+        </div>
+        <div class="milestone">
+          <span class="milestone__value" id="milestone-best-era">—</span>
+          <span class="milestone__label">Most Complete Era</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Era Comparison Chart -->
+    <section class="stats-section" aria-label="Era comparison chart">
+      <h2 class="stats-section__title">Completion by Era</h2>
+      <div class="chart-container chart-container--bar">
+        <canvas id="chart-era-bars"></canvas>
+      </div>
+    </section>
+
+    <!-- Per-Era Detail Tables -->
+    <section class="stats-section" aria-label="Per-era details" id="era-details">
+      <h2 class="stats-section__title">Era Breakdown</h2>
+      <!-- Rendered by js/stats.js -->
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>
+        Card counts based on
+        <a href="https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_Trading_Card_Game_expansions" target="_blank" rel="noopener noreferrer">
+          Bulbapedia's expansion list
+        </a>.
+        Data is saved locally in your browser.
+      </p>
+      <p class="footer-meta">PokéTrack is a fan-made tracker and is not affiliated with The Pokémon Company.</p>
+    </div>
+  </footer>
+
+  <!-- Set data (same as main page) -->
+  <script src="js/sets/_config.js"></script>
+  <script src="js/sets/mega-evolution.js"></script>
+  <script src="js/sets/scarlet-violet.js"></script>
+  <script src="js/sets/sword-shield.js"></script>
+  <script src="js/sets/sun-moon.js"></script>
+  <script src="js/sets/xy.js"></script>
+  <script src="js/sets/black-white.js"></script>
+  <script src="js/sets/hgss.js"></script>
+  <script src="js/sets/platinum.js"></script>
+  <script src="js/sets/diamond-pearl.js"></script>
+  <script src="js/sets/ex.js"></script>
+  <script src="js/sets/e-card.js"></script>
+  <script src="js/sets/legendary-collection.js"></script>
+  <script src="js/sets/neo.js"></script>
+  <script src="js/sets/original-series.js"></script>
+  <script src="js/sets/other.js"></script>
+  <script src="js/sets/_index.js"></script>
+
+  <!-- Chart.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+
+  <!-- Stats logic -->
+  <script src="js/stats.js"></script>
+</body>
+</html>
