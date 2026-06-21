@@ -397,7 +397,7 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
 .chart-container--growth {
   position: relative;
   width: 100%;
-  min-height: 180px;
+  height: 220px;
   margin-bottom: 1rem;
 }
 
@@ -475,6 +475,10 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
 
   .chart-container--bar {
     min-height: 250px;
+  }
+
+  .chart-container--growth {
+    height: 160px;
   }
 
   .milestones {
