@@ -395,6 +395,12 @@ if (auth) {
       window.syncCollectionToCloud(merged);
     }
 
+    // Auto-pull cloud history into local on sign-in (works on any page).
+    // This makes the "Sync history" button push-only — pulling is automatic.
+    if (typeof window.loadHistoryFromCloud === "function") {
+      window.loadHistoryFromCloud().catch(() => {});
+    }
+
     document.dispatchEvent(new CustomEvent("poketrack:auth-ready", { detail: { signedIn: true } }));
   });
 } else {

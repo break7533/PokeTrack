@@ -429,10 +429,10 @@
         tr.innerHTML = `
           <td>${escapeHtml(set.name)}</td>
           <td class="hide-mobile">${set.baseCollected} / ${set.baseTotal}</td>
-          <td class="${pctColorClass(set.basePct)}">${set.basePct}%</td>
+          <td class="${pctColorClass(set.basePct)}" data-detail="${set.baseCollected} / ${set.baseTotal}">${set.basePct}%</td>
           <td class="hide-mobile">${set.secretTotal > 0 ? set.secretCollected + " / " + set.secretTotal : "—"}</td>
-          <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}">${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
-          <td class="era-detail__total-cell">
+          <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}" ${set.secretTotal > 0 ? 'data-detail="' + set.secretCollected + ' / ' + set.secretTotal + '"' : ''}>${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
+          <td class="era-detail__total-cell" data-detail="${set.totalCollected} / ${set.totalCards}">
             <strong class="${pctColorClass(set.totalPct)}">${set.totalPct}%</strong>
             <span class="mini-bar"><span class="mini-bar__fill" style="width:${set.totalPct}%;background:${barColor}"></span></span>
           </td>
@@ -489,17 +489,6 @@
   let growthChart = null;
   let currentRange = 7; // default to 7 days
   let historyData = [];
-
-  function loadLocalHistory() {
-    try {
-      const raw = localStorage.getItem("poketrack:history:v1");
-      if (!raw) return [];
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr : [];
-    } catch (_) {
-      return [];
-    }
-  }
 
   function filterHistoryByRange(history, days) {
     const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
@@ -761,7 +750,7 @@
     renderEraDetails(currentStats);
 
     // Growth section
-    historyData = loadLocalHistory();
+    historyData = window.getLocalHistory ? window.getLocalHistory() : [];
     bindRangeToggle();
     renderGrowth(historyData, currentRange);
 

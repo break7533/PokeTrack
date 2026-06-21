@@ -498,6 +498,35 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
   .hide-mobile {
     display: none;
   }
+
+  /* Tooltip on tap/hover for percentage cells (reveals raw counts) */
+  [data-detail] {
+    position: relative;
+    cursor: pointer;
+  }
+  [data-detail]::after {
+    content: attr(data-detail);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-2px);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--radius-sm);
+    background: var(--color-text);
+    color: var(--color-bg);
+    font-size: 0.72rem;
+    font-weight: 600;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+  }
+  [data-detail]:hover::after,
+  [data-detail]:active::after,
+  [data-detail]:focus::after {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 420px) {
