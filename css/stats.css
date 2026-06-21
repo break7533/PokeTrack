@@ -312,6 +312,7 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
 }
 
 .mini-bar__fill {
+  display: block;
   height: 100%;
   border-radius: inherit;
   transition: width 0.3s ease;
