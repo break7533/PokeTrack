@@ -405,9 +405,9 @@
       const thead = document.createElement("thead");
       thead.innerHTML = `<tr>
         <th>Set</th>
-        <th>Base</th>
+        <th class="hide-mobile">Base</th>
         <th>Base %</th>
-        <th>Secret</th>
+        <th class="hide-mobile">Secret</th>
         <th>Secret %</th>
         <th>Total</th>
       </tr>`;
@@ -428,9 +428,9 @@
 
         tr.innerHTML = `
           <td>${escapeHtml(set.name)}</td>
-          <td>${set.baseCollected} / ${set.baseTotal}</td>
+          <td class="hide-mobile">${set.baseCollected} / ${set.baseTotal}</td>
           <td class="${pctColorClass(set.basePct)}">${set.basePct}%</td>
-          <td>${set.secretTotal > 0 ? set.secretCollected + " / " + set.secretTotal : "—"}</td>
+          <td class="hide-mobile">${set.secretTotal > 0 ? set.secretCollected + " / " + set.secretTotal : "—"}</td>
           <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}">${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
           <td class="era-detail__total-cell">
             <strong class="${pctColorClass(set.totalPct)}">${set.totalPct}%</strong>
@@ -764,5 +764,17 @@
     historyData = loadLocalHistory();
     bindRangeToggle();
     renderGrowth(historyData, currentRange);
+
+    // Auto-fetch cloud history when auth is ready (non-blocking)
+    document.addEventListener("poketrack:auth-ready", function (e) {
+      if (!e.detail || !e.detail.signedIn) return;
+      if (typeof window.loadHistoryFromCloud !== "function") return;
+      window.loadHistoryFromCloud().then(function (merged) {
+        if (merged && merged.length > historyData.length) {
+          historyData = merged;
+          renderGrowth(historyData, currentRange);
+        }
+      }).catch(function () { /* local data is fine */ });
+    });
   });
 })();

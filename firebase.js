@@ -378,7 +378,10 @@ if (auth) {
     currentUser = user;
     renderAuthButton(user);
 
-    if (!user) return;
+    if (!user) {
+      document.dispatchEvent(new CustomEvent("poketrack:auth-ready", { detail: { signedIn: false } }));
+      return;
+    }
 
     const cloud = await loadFromCloud(user.uid);
     const local = window.getLocalCollection ? window.getLocalCollection() : null;
@@ -391,6 +394,13 @@ if (auth) {
     if (typeof window.syncCollectionToCloud === "function") {
       window.syncCollectionToCloud(merged);
     }
+
+    document.dispatchEvent(new CustomEvent("poketrack:auth-ready", { detail: { signedIn: true } }));
+  });
+} else {
+  // Firebase not configured — fire event immediately so listeners don't hang
+  document.addEventListener("DOMContentLoaded", () => {
+    document.dispatchEvent(new CustomEvent("poketrack:auth-ready", { detail: { signedIn: false } }));
   });
 }
 

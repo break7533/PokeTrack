@@ -493,6 +493,11 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
   .mini-bar {
     width: 36px;
   }
+
+  /* Hide raw count columns on mobile — show only percentages */
+  .hide-mobile {
+    display: none;
+  }
 }
 
 @media (max-width: 420px) {
@@ -506,5 +511,9 @@ html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
 
   .stats-overview__cards {
     grid-template-columns: 1fr;
+  }
+
+  .mini-bar {
+    display: none;
   }
 }
