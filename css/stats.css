@@ -177,13 +177,6 @@
   font-weight: 700;
 }
 
-.era-detail__percent {
-  font-size: 0.9rem;
-  font-weight: 700;
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-}
-
 .era-detail__table {
   width: 100%;
   border-collapse: collapse;
@@ -229,12 +222,81 @@
   font-weight: 700;
 }
 
+.era-detail__table tr[data-status="almost"] td:first-child {
+  color: var(--progress-mid);
+  font-weight: 600;
+}
+
+.era-detail__table tr[data-status="almost"] {
+  background: rgba(245, 158, 11, 0.04);
+}
+html[data-theme="dark"] .era-detail__table tr[data-status="almost"] {
+  background: rgba(245, 158, 11, 0.06);
+}
+
 .era-detail__table tr[data-status="started"] td:first-child {
   color: var(--color-text);
 }
 
 .era-detail__table tr[data-status="untouched"] {
   opacity: 0.55;
+}
+
+/* ---------- Percentage colour classes ---------- */
+
+.pct--complete {
+  color: var(--progress-complete);
+  font-weight: 700;
+}
+.pct--almost {
+  color: var(--progress-high);
+  font-weight: 600;
+}
+.pct--high {
+  color: var(--progress-high);
+}
+.pct--mid {
+  color: var(--progress-mid);
+}
+.pct--low {
+  color: var(--progress-low);
+}
+.pct--zero {
+  color: var(--color-text-muted);
+}
+
+/* Era header percent inherits the colour classes above */
+.era-detail__percent {
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Era summary line ---------- */
+
+.era-detail__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-bottom: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.era-detail__summary-sep {
+  color: var(--color-border);
+}
+
+/* ---------- Total column emphasis ---------- */
+
+.era-detail__total-cell {
+  white-space: nowrap;
+}
+
+.era-detail__total-cell strong {
+  font-size: 0.9em;
 }
 
 /* Per-row mini progress bar */

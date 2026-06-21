@@ -379,12 +379,24 @@
       name.textContent = era.name;
 
       const pctEl = document.createElement("span");
-      pctEl.className = "era-detail__percent";
+      pctEl.className = "era-detail__percent " + pctColorClass(era.totalPct);
       pctEl.textContent = era.totalPct + "% complete";
 
       header.appendChild(name);
       header.appendChild(pctEl);
       section.appendChild(header);
+
+      // Era summary line
+      const summary = document.createElement("div");
+      summary.className = "era-detail__summary";
+      summary.innerHTML =
+        `<span>${era.baseCollected.toLocaleString()} / ${era.baseTotal.toLocaleString()} base</span>` +
+        `<span class="era-detail__summary-sep">·</span>` +
+        (era.secretTotal > 0
+          ? `<span>${era.secretCollected.toLocaleString()} / ${era.secretTotal.toLocaleString()} secret</span><span class="era-detail__summary-sep">·</span>`
+          : "") +
+        `<span>${era.totalCollected.toLocaleString()} / ${era.totalCards.toLocaleString()} total</span>`;
+      section.appendChild(summary);
 
       // Table
       const table = document.createElement("table");
@@ -401,10 +413,14 @@
       </tr>`;
       table.appendChild(thead);
 
+      // Sort sets by total completion (highest first)
+      const sortedSets = era.sets.slice().sort((a, b) => b.totalPct - a.totalPct);
+
       const tbody = document.createElement("tbody");
-      era.sets.forEach((set) => {
+      sortedSets.forEach((set) => {
         const tr = document.createElement("tr");
         if (set.isComplete) tr.dataset.status = "complete";
+        else if (set.totalPct >= 90) tr.dataset.status = "almost";
         else if (set.isStarted) tr.dataset.status = "started";
         else tr.dataset.status = "untouched";
 
@@ -413,11 +429,11 @@
         tr.innerHTML = `
           <td>${escapeHtml(set.name)}</td>
           <td>${set.baseCollected} / ${set.baseTotal}</td>
-          <td>${set.basePct}%</td>
+          <td class="${pctColorClass(set.basePct)}">${set.basePct}%</td>
           <td>${set.secretTotal > 0 ? set.secretCollected + " / " + set.secretTotal : "—"}</td>
-          <td>${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
-          <td>
-            ${set.totalPct}%
+          <td class="${set.secretTotal > 0 ? pctColorClass(set.secretPct) : ""}">${set.secretTotal > 0 ? set.secretPct + "%" : "—"}</td>
+          <td class="era-detail__total-cell">
+            <strong class="${pctColorClass(set.totalPct)}">${set.totalPct}%</strong>
             <span class="mini-bar"><span class="mini-bar__fill" style="width:${set.totalPct}%;background:${barColor}"></span></span>
           </td>
         `;
@@ -428,6 +444,15 @@
       section.appendChild(table);
       container.appendChild(section);
     });
+  }
+
+  function pctColorClass(pct) {
+    if (pct >= 100) return "pct--complete";
+    if (pct >= 90) return "pct--almost";
+    if (pct >= 67) return "pct--high";
+    if (pct >= 34) return "pct--mid";
+    if (pct > 0) return "pct--low";
+    return "pct--zero";
   }
 
   function getBarColor(pct) {
