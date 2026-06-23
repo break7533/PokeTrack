@@ -495,30 +495,36 @@
     return history.filter((e) => e.at > cutoff);
   }
 
-  function computeGrowth(history) {
+  function localDateKey(ts) {
+    const d = new Date(ts);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function computeGrowth(history, range) {
     // Net cards added
     let net = 0;
     history.forEach((e) => { net += (e.to - e.from); });
 
-    // Per-day buckets
+    // Per-day buckets (local dates so midnight-ish entries land on the
+    // correct day from the user's perspective)
     const dayMap = {};
     history.forEach((e) => {
-      const day = new Date(e.at).toISOString().slice(0, 10);
+      const day = localDateKey(e.at);
       dayMap[day] = (dayMap[day] || 0) + (e.to - e.from);
     });
 
-    // Fill in missing days for the chart
+    // Always show exactly `range` days ending today (local)
     const days = [];
     const values = [];
-    if (Object.keys(dayMap).length > 0) {
-      const sortedDays = Object.keys(dayMap).sort();
-      const start = new Date(sortedDays[0]);
-      const end = new Date();
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = d.toISOString().slice(0, 10);
-        days.push(key);
-        values.push(dayMap[key] || 0);
-      }
+    const now = new Date();
+    for (let i = range - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      const key = localDateKey(d.getTime());
+      days.push(key);
+      values.push(dayMap[key] || 0);
     }
 
     // Top movers (group by set)
@@ -549,7 +555,7 @@
 
   function renderGrowth(history, range) {
     const filtered = filterHistoryByRange(history, range);
-    const growth = computeGrowth(filtered);
+    const growth = computeGrowth(filtered, range);
     const colors = getThemeColors();
 
     renderGrowthSummary(growth);
