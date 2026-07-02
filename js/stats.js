@@ -763,13 +763,77 @@
     // Auto-fetch cloud history when auth is ready (non-blocking)
     document.addEventListener("poketrack:auth-ready", function (e) {
       if (!e.detail || !e.detail.signedIn) return;
-      if (typeof window.loadHistoryFromCloud !== "function") return;
-      window.loadHistoryFromCloud().then(function (merged) {
-        if (merged && merged.length > historyData.length) {
-          historyData = merged;
-          renderGrowth(historyData, currentRange);
-        }
-      }).catch(function () { /* local data is fine */ });
+      if (typeof window.loadHistoryFromCloud === "function") {
+        window.loadHistoryFromCloud().then(function (merged) {
+          if (merged && merged.length > historyData.length) {
+            historyData = merged;
+            renderGrowth(historyData, currentRange);
+          }
+        }).catch(function () { /* local data is fine */ });
+      }
+      // Load daily recommendation
+      if (typeof window.loadDailyRecommendation === "function") {
+        window.loadDailyRecommendation().then(function (rec) {
+          renderRecommendation(rec);
+        }).catch(function () { /* no recommendation is fine */ });
+      }
     });
   });
+
+  // ---------- Recommendation card ----------
+
+  var FALLBACK_QUOTES = [
+    "Every collection starts with a single card. Keep going!",
+    "The journey of a thousand cards begins with a single pack.",
+    "Consistency beats intensity — even 1 card logged keeps momentum.",
+    "Your collection tells a story. Every card is a chapter.",
+    "Great collectors aren't born — they're made one card at a time."
+  ];
+
+  function renderRecommendation(rec) {
+    var section = document.getElementById("rec-section");
+    if (!section) return;
+
+    // If no recommendation, show fallback
+    if (!rec || !rec.quote) {
+      var fallbackIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % FALLBACK_QUOTES.length;
+      document.getElementById("rec-quote").textContent = FALLBACK_QUOTES[fallbackIdx];
+      document.getElementById("rec-focus").style.display = "none";
+      document.querySelector(".rec-card__details").style.display = "none";
+      document.getElementById("rec-meta").textContent = "";
+      section.style.display = "";
+      return;
+    }
+
+    // Render full recommendation
+    document.getElementById("rec-quote").textContent = rec.quote;
+
+    var focusEl = document.getElementById("rec-focus");
+    if (rec.focus && rec.focus.name) {
+      document.getElementById("rec-focus-name").textContent = rec.focus.name;
+      document.getElementById("rec-focus-reason").textContent = rec.focus.reason || "";
+      focusEl.style.display = "";
+    } else {
+      focusEl.style.display = "none";
+    }
+
+    var detailsEl = document.querySelector(".rec-card__details");
+    if (rec.reasoning) {
+      document.getElementById("rec-reasoning").textContent = rec.reasoning;
+      detailsEl.style.display = "";
+    } else {
+      detailsEl.style.display = "none";
+    }
+
+    // Meta line
+    var metaEl = document.getElementById("rec-meta");
+    if (rec.date) {
+      var toneLabel = rec.tone ? rec.tone.charAt(0).toUpperCase() + rec.tone.slice(1) : "";
+      metaEl.textContent = rec.date + (toneLabel ? " · " + toneLabel : "");
+    } else {
+      metaEl.textContent = "";
+    }
+
+    section.style.display = "";
+  }
 })();

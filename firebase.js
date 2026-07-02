@@ -211,6 +211,25 @@ window.loadHistoryFromCloud = async function () {
   }
 };
 
+/**
+ * Load the daily recommendation from Firestore.
+ * Returns the recommendation object or null if none exists.
+ */
+window.loadDailyRecommendation = async function () {
+  if (!currentUser || !db) return null;
+
+  try {
+    const recRef = doc(db, "users", currentUser.uid, "recommendations", "daily");
+    const snap = await getDoc(recRef);
+    if (snap.exists()) {
+      return snap.data();
+    }
+  } catch (e) {
+    console.warn("PokéTrack: failed to load daily recommendation", e.message || e);
+  }
+  return null;
+};
+
 // ---------- Internals ----------
 
 async function loadFromCloud(uid) {
