@@ -1,8 +1,8 @@
 /**
  * PokéTrack — Cloud Functions
  *
- * Scheduled function: generates a daily collection recommendation per user
- * using GitHub Models API (OpenAI gpt-5) and writes it to Firestore.
+ * Scheduled function: generates 3 daily collection recommendations per user
+ * using GitHub Models API (GPT-4o) and writes them to Firestore.
  */
 "use strict";
 
@@ -47,7 +47,7 @@ async function callModel(token, prompt) {
  * Daily recommendation generator.
  * Runs at 05:00 UTC every day.
  * Iterates all users, builds context from their collection + history,
- * calls GitHub Models API, and writes the recommendation to Firestore.
+ * calls GitHub Models API for 3 recommendations, and writes them to Firestore.
  */
 exports.generateDailyRecommendation = onSchedule(
   {
@@ -108,49 +108,61 @@ async function generateForUser(db, token, uid, userDoc) {
     if (data && data.set && data.at) history.push(data);
   });
 
-  // 3. Load previous recommendation (to avoid repeats)
+  // 3. Load previous recommendations (to vary from)
   const recRef = db.collection("users").doc(uid).collection("recommendations").doc("daily");
   const prevRecSnap = await recRef.get();
   const prevRec = prevRecSnap.exists ? prevRecSnap.data() : null;
+  const prevItems = prevRec && prevRec.items ? prevRec.items : null;
 
   // 4. Build context and prompt
-  const context = buildContext(collection, history, prevRec);
+  const context = buildContext(collection, history, prevItems);
   const prompt = buildPrompt(context);
 
   // 5. Call GitHub Models API
   const text = await callModel(token, prompt);
 
-  // 6. Parse JSON response
-  let recommendation;
+  // 6. Parse JSON response (expecting array of 3)
+  let items;
   try {
-    // Strip markdown code fences if present
     const cleaned = text.replace(/^```json?\s*/i, "").replace(/\s*```$/i, "");
-    recommendation = JSON.parse(cleaned);
+    items = JSON.parse(cleaned);
   } catch (parseErr) {
     logger.error(`Failed to parse model response for user ${uid}:`, text);
     throw new Error("Invalid JSON from model: " + parseErr.message);
   }
 
-  // 7. Validate structure
-  if (!recommendation.quote || !recommendation.focus || !recommendation.reasoning) {
-    logger.error(`Incomplete recommendation for user ${uid}:`, recommendation);
-    throw new Error("Recommendation missing required fields");
+  // 7. Validate structure (must be array with at least 1 item)
+  if (!Array.isArray(items) || items.length === 0) {
+    logger.error(`Expected array of recommendations for user ${uid}:`, items);
+    throw new Error("Recommendation response is not an array");
+  }
+
+  // Validate each item
+  const validItems = items.filter((item) =>
+    item && item.quote && item.focus && item.reasoning
+  ).slice(0, 3);
+
+  if (validItems.length === 0) {
+    logger.error(`No valid items in recommendation for user ${uid}:`, items);
+    throw new Error("No valid recommendation items");
   }
 
   // 8. Write to Firestore
   const recData = {
-    quote: recommendation.quote,
-    focus: {
-      setId: recommendation.focus.setId || "",
-      name: recommendation.focus.name || "",
-      reason: recommendation.focus.reason || ""
-    },
-    reasoning: recommendation.reasoning,
+    items: validItems.map((item) => ({
+      quote: item.quote,
+      focus: {
+        setId: item.focus.setId || "",
+        name: item.focus.name || "",
+        reason: item.focus.reason || ""
+      },
+      reasoning: item.reasoning
+    })),
     tone: context.tone,
     generatedAt: Date.now(),
     date: new Date().toISOString().split("T")[0]
   };
 
   await recRef.set(recData);
-  logger.info(`Recommendation written for user ${uid}: focus=${recData.focus.name}`);
+  logger.info(`Recommendation written for user ${uid}: ${recData.items.length} items, focus=${recData.items.map(i => i.focus.name).join(", ")}`);
 }

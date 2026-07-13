@@ -2,7 +2,7 @@
  * PokéTrack — Prompt builder for daily recommendation
  *
  * Transforms raw collection + history data into a structured context
- * string, then wraps it in a Gemini-ready prompt.
+ * string, then wraps it in a prompt requesting 3 distinct recommendations.
  */
 "use strict";
 
@@ -15,10 +15,10 @@ const TONES = ["motivational", "analytical", "suggestion", "trivia"];
  *
  * @param {Object} collection - User's collection { [setId]: { base, secret } }
  * @param {Array} history - History entries [{ set, kind, from, to, at }]
- * @param {Object|null} prevRec - Previous recommendation (to avoid repeats)
+ * @param {Array|null} prevItems - Previous day's recommendation items (to vary from)
  * @returns {Object} Context for prompt
  */
-function buildContext(collection, history, prevRec) {
+function buildContext(collection, history, prevItems) {
   const eras = getMinimalSets();
   const now = Date.now();
   const oneDayAgo = now - 24 * 60 * 60 * 1000;
@@ -126,19 +126,17 @@ function buildContext(collection, history, prevRec) {
     streak,
     topActiveThisWeek,
     tone,
-    prevRecommendation: prevRec
-      ? { quote: prevRec.quote, focusSetId: prevRec.focus?.setId }
-      : null
+    prevItems: prevItems || null
   };
 }
 
 /**
- * Build the prompt string for Gemini.
+ * Build the prompt string requesting 3 distinct recommendations.
  */
 function buildPrompt(context) {
   const lines = [];
 
-  lines.push("You are a Pokemon TCG collection advisor. Analyze the collector's progress and provide a daily recommendation.");
+  lines.push("You are a Pokemon TCG collection advisor. Analyze the collector's progress and provide 3 distinct daily recommendations.");
   lines.push("");
   lines.push("## Collector's Current Status");
   lines.push(`- Overall: ${context.overall.collected} / ${context.overall.total} cards (${context.overall.pct}%)`);
@@ -174,27 +172,30 @@ function buildPrompt(context) {
   if (context.tone === "trivia") lines.push("Include a fun fact about Pokemon TCG collecting, sets, or cards.");
   lines.push("");
 
-  if (context.prevRecommendation) {
-    lines.push("## Previous Recommendation (avoid repeating)");
-    lines.push(`- Quote: "${context.prevRecommendation.quote}"`);
-    if (context.prevRecommendation.focusSetId) {
-      lines.push(`- Focus set: ${context.prevRecommendation.focusSetId}`);
-    }
-    lines.push("Choose a DIFFERENT set to focus on and a different angle.");
+  if (context.prevItems && context.prevItems.length > 0) {
+    lines.push("## Yesterday's Recommendations (vary from these)");
+    context.prevItems.forEach((item, i) => {
+      lines.push(`${i + 1}. "${item.quote}" — Focus: ${item.focus?.name || "none"}`);
+    });
+    lines.push("Vary your angle and phrasing. You MAY recommend the same set if it's genuinely the best focus, but offer a fresh perspective.");
     lines.push("");
   }
 
   lines.push("## Instructions");
-  lines.push("Respond with ONLY a valid JSON object (no markdown fencing, no extra text). Schema:");
-  lines.push(`{`);
-  lines.push(`  "quote": "1-2 sentence ${context.tone} message about their progress",`);
-  lines.push(`  "focus": {`);
-  lines.push(`    "setId": "exact set ID from the data above",`);
-  lines.push(`    "name": "set name",`);
-  lines.push(`    "reason": "1 sentence explaining why to focus here"`);
+  lines.push("Provide 3 DISTINCT recommendations. Each should focus on a DIFFERENT set and offer a unique angle.");
+  lines.push("Respond with ONLY a valid JSON array (no markdown fencing, no extra text). Schema:");
+  lines.push(`[`);
+  lines.push(`  {`);
+  lines.push(`    "quote": "1-2 sentence ${context.tone} message about their progress",`);
+  lines.push(`    "focus": {`);
+  lines.push(`      "setId": "exact set ID from the data above",`);
+  lines.push(`      "name": "set name",`);
+  lines.push(`      "reason": "1 sentence explaining why to focus here"`);
+  lines.push(`    },`);
+  lines.push(`    "reasoning": "2-3 sentences connecting recent activity to your suggestion"`);
   lines.push(`  },`);
-  lines.push(`  "reasoning": "2-3 sentences connecting recent activity to your suggestion"`);
-  lines.push(`}`);
+  lines.push(`  ... (3 items total)`);
+  lines.push(`]`);
 
   return lines.join("\n");
 }

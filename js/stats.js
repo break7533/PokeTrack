@@ -775,12 +775,12 @@
       if (typeof window.loadDailyRecommendation === "function") {
         window.loadDailyRecommendation().then(function (rec) {
           renderRecommendation(rec);
-        }).catch(function () { /* no recommendation is fine */ });
+        }).catch(function () { renderRecommendation(null); });
       }
     });
   });
 
-  // ---------- Recommendation card ----------
+  // ---------- Recommendation carousel ----------
 
   var FALLBACK_QUOTES = [
     "Every collection starts with a single card. Keep going!",
@@ -791,49 +791,78 @@
   ];
 
   function renderRecommendation(rec) {
-    var section = document.getElementById("rec-section");
-    if (!section) return;
+    var carousel = document.getElementById("rec-carousel");
+    var dotsContainer = document.getElementById("rec-dots");
+    if (!carousel) return;
 
-    // If no recommendation, show fallback
-    if (!rec || !rec.quote) {
+    // If no data or no items, show fallback
+    var items = rec && rec.items && rec.items.length > 0 ? rec.items : null;
+
+    if (!items) {
       var fallbackIdx = Math.floor(Date.now() / (24 * 60 * 60 * 1000)) % FALLBACK_QUOTES.length;
-      document.getElementById("rec-quote").textContent = FALLBACK_QUOTES[fallbackIdx];
-      document.getElementById("rec-focus").style.display = "none";
-      document.querySelector(".rec-card__details").style.display = "none";
-      document.getElementById("rec-meta").textContent = "";
-      section.style.display = "";
+      carousel.innerHTML = buildCardHTML({
+        quote: FALLBACK_QUOTES[fallbackIdx],
+        focus: null,
+        reasoning: null
+      });
+      dotsContainer.style.display = "none";
       return;
     }
 
-    // Render full recommendation
-    document.getElementById("rec-quote").textContent = rec.quote;
+    // Render all recommendation cards
+    carousel.innerHTML = items.map(function (item) {
+      return buildCardHTML(item);
+    }).join("");
 
-    var focusEl = document.getElementById("rec-focus");
-    if (rec.focus && rec.focus.name) {
-      document.getElementById("rec-focus-name").textContent = rec.focus.name;
-      document.getElementById("rec-focus-reason").textContent = rec.focus.reason || "";
-      focusEl.style.display = "";
-    } else {
-      focusEl.style.display = "none";
+    // Update dots
+    var dotsHTML = items.map(function (_, i) {
+      return '<span class="rec-dot' + (i === 0 ? ' rec-dot--active' : '') + '"></span>';
+    }).join("");
+    dotsContainer.innerHTML = dotsHTML;
+    dotsContainer.style.display = items.length > 1 ? "" : "none";
+
+    // Scroll observer for dot sync
+    if (items.length > 1) {
+      bindCarouselDots(carousel, dotsContainer);
+    }
+  }
+
+  function buildCardHTML(item) {
+    var html = '<div class="rec-card">';
+    html += '<blockquote class="rec-card__quote">' + escapeHtml(item.quote) + '</blockquote>';
+
+    if (item.focus && item.focus.name) {
+      html += '<div class="rec-card__focus">';
+      html += '<span class="rec-card__focus-label">Focus:</span>';
+      html += '<span class="rec-card__focus-name">' + escapeHtml(item.focus.name) + '</span>';
+      if (item.focus.reason) {
+        html += '<span class="rec-card__focus-reason">' + escapeHtml(item.focus.reason) + '</span>';
+      }
+      html += '</div>';
     }
 
-    var detailsEl = document.querySelector(".rec-card__details");
-    if (rec.reasoning) {
-      document.getElementById("rec-reasoning").textContent = rec.reasoning;
-      detailsEl.style.display = "";
-    } else {
-      detailsEl.style.display = "none";
+    if (item.reasoning) {
+      html += '<details class="rec-card__details">';
+      html += '<summary class="rec-card__toggle">Why this recommendation?</summary>';
+      html += '<p class="rec-card__reasoning">' + escapeHtml(item.reasoning) + '</p>';
+      html += '</details>';
     }
 
-    // Meta line
-    var metaEl = document.getElementById("rec-meta");
-    if (rec.date) {
-      var toneLabel = rec.tone ? rec.tone.charAt(0).toUpperCase() + rec.tone.slice(1) : "";
-      metaEl.textContent = rec.date + (toneLabel ? " · " + toneLabel : "");
-    } else {
-      metaEl.textContent = "";
-    }
+    html += '</div>';
+    return html;
+  }
 
-    section.style.display = "";
+  function bindCarouselDots(carousel, dotsContainer) {
+    var cards = carousel.querySelectorAll(".rec-card");
+    var dots = dotsContainer.querySelectorAll(".rec-dot");
+
+    carousel.addEventListener("scroll", function () {
+      var scrollLeft = carousel.scrollLeft;
+      var cardWidth = cards[0].offsetWidth + 16; // gap
+      var activeIndex = Math.round(scrollLeft / cardWidth);
+      for (var i = 0; i < dots.length; i++) {
+        dots[i].classList.toggle("rec-dot--active", i === activeIndex);
+      }
+    });
   }
 })();
