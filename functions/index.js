@@ -2,7 +2,7 @@
  * PokéTrack — Cloud Functions
  *
  * Scheduled function: generates a daily collection recommendation per user
- * using Google Gemini API and writes it to Firestore.
+ * using GitHub Models API (OpenAI gpt-5) and writes it to Firestore.
  */
 "use strict";
 
@@ -10,19 +10,44 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { buildContext, buildPrompt } = require("./prompt");
 const logger = require("firebase-functions/logger");
 
 initializeApp();
 
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const GITHUB_MODELS_TOKEN = defineSecret("GITHUB_MODELS_TOKEN");
+
+/**
+ * Call GitHub Models API (OpenAI-compatible endpoint).
+ */
+async function callModel(token, prompt) {
+  const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: "openai/gpt-5",
+      messages: [{ role: "user", content: prompt }],
+      temperature: 0.7
+    })
+  });
+
+  if (!res.ok) {
+    const errBody = await res.text();
+    throw new Error(`GitHub Models API error ${res.status}: ${errBody}`);
+  }
+
+  const data = await res.json();
+  return data.choices[0].message.content.trim();
+}
 
 /**
  * Daily recommendation generator.
  * Runs at 05:00 UTC every day.
  * Iterates all users, builds context from their collection + history,
- * calls Gemini, and writes the recommendation to Firestore.
+ * calls GitHub Models API, and writes the recommendation to Firestore.
  */
 exports.generateDailyRecommendation = onSchedule(
   {
@@ -30,12 +55,11 @@ exports.generateDailyRecommendation = onSchedule(
     timeZone: "Etc/GMT",
     maxInstances: 1,
     timeoutSeconds: 120,
-    secrets: [GEMINI_API_KEY]
+    secrets: [GITHUB_MODELS_TOKEN]
   },
   async (event) => {
     const db = getFirestore();
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY.value());
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const token = GITHUB_MODELS_TOKEN.value();
 
     // Get all users
     const usersSnapshot = await db.collection("users").get();
@@ -48,7 +72,7 @@ exports.generateDailyRecommendation = onSchedule(
     for (const userDoc of usersSnapshot.docs) {
       const uid = userDoc.id;
       try {
-        await generateForUser(db, model, uid, userDoc);
+        await generateForUser(db, token, uid, userDoc);
       } catch (err) {
         logger.error(`Failed to generate recommendation for user ${uid}:`, err);
       }
@@ -58,7 +82,7 @@ exports.generateDailyRecommendation = onSchedule(
   }
 );
 
-async function generateForUser(db, model, uid, userDoc) {
+async function generateForUser(db, token, uid, userDoc) {
   // 1. Load collection data
   const userData = userDoc.data();
   const collection = userData.collection || {};
@@ -93,10 +117,8 @@ async function generateForUser(db, model, uid, userDoc) {
   const context = buildContext(collection, history, prevRec);
   const prompt = buildPrompt(context);
 
-  // 5. Call Gemini
-  const result = await model.generateContent(prompt);
-  const response = result.response;
-  const text = response.text().trim();
+  // 5. Call GitHub Models API
+  const text = await callModel(token, prompt);
 
   // 6. Parse JSON response
   let recommendation;
@@ -105,8 +127,8 @@ async function generateForUser(db, model, uid, userDoc) {
     const cleaned = text.replace(/^```json?\s*/i, "").replace(/\s*```$/i, "");
     recommendation = JSON.parse(cleaned);
   } catch (parseErr) {
-    logger.error(`Failed to parse Gemini response for user ${uid}:`, text);
-    throw new Error("Invalid JSON from Gemini: " + parseErr.message);
+    logger.error(`Failed to parse model response for user ${uid}:`, text);
+    throw new Error("Invalid JSON from model: " + parseErr.message);
   }
 
   // 7. Validate structure
