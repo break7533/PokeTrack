@@ -21,14 +21,14 @@ const GITHUB_MODELS_TOKEN = defineSecret("GITHUB_MODELS_TOKEN");
  * Call GitHub Models API (OpenAI-compatible endpoint).
  */
 async function callModel(token, prompt) {
-  const res = await fetch("https://models.inference.ai.azure.com/chat/completions", {
+  const res = await fetch("https://models.github.ai/inference/chat/completions", {
     method: "POST",
     headers: {
       "Authorization": `Bearer ${token}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({
-      model: "openai/gpt-5",
+      model: "openai/gpt-4o",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7
     })
