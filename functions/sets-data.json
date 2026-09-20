@@ -4,6 +4,18 @@
     "name": "Mega Evolution",
     "sets": [
       {
+        "id": "me-delta-reign",
+        "name": "Delta Reign",
+        "base": 103,
+        "secret": 1
+      },
+      {
+        "id": "me-30th-celebration",
+        "name": "30th Celebration",
+        "base": 128,
+        "secret": 33
+      },
+      {
         "id": "me-pitch-black",
         "name": "Pitch Black",
         "base": 84,
