@@ -2,20 +2,6 @@
    PokéTrack — Stats page styles
    ============================================================ */
 
-/* Page title badge */
-.site-title__page {
-  font-size: 0.7em;
-  font-weight: 600;
-  background: var(--color-yellow);
-  color: var(--color-blue-dark);
-  padding: 0.15em 0.5em;
-  border-radius: var(--radius-sm);
-  margin-left: 0.4rem;
-  vertical-align: middle;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-}
-
 /* Nav link in header */
 .nav-link {
   text-decoration: none;

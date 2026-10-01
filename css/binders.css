@@ -1,0 +1,735 @@
+/* ============================================================
+   PokéTrack — binder plan page
+   ------------------------------------------------------------
+   Cards, not tables. The plan is meant to be sent to people who
+   will open it on a phone, so every row reflows to one column
+   rather than scrolling sideways.
+
+   Shares the tokens and .progress-bar / .stat-card / .btn
+   components from style.css; the overrides below re-colour those
+   for body context, the same way stats.css does.
+   ============================================================ */
+
+.binders-main {
+  /* body's padding-top covers the fixed header (js/binders-view.js sets
+     --site-header-height); this is the gap below it. */
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+/* ---------- Buttons in body context ----------
+   .btn--ghost in style.css is built for the dark header (white text on a
+   translucent white surface). On a page background it has to be re-coloured
+   or it disappears. */
+
+.binders-main .btn--ghost {
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+.binders-main .btn--ghost:hover {
+  background: var(--color-border);
+}
+
+.btn--primary {
+  background: var(--color-blue);
+  color: #fff;
+  border-color: var(--color-blue);
+}
+.btn--primary:hover {
+  background: var(--color-blue-dark);
+  border-color: var(--color-blue-dark);
+}
+
+/* ---------- Intro + summary ---------- */
+
+.binders-intro {
+  margin: 1.25rem 0 1.75rem;
+}
+
+.binders-intro__lead {
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: var(--color-text);
+  max-width: 60ch;
+  margin-bottom: 1rem;
+}
+
+.binders-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.6rem;
+}
+
+.binders-summary .stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: none;
+}
+.binders-summary .stat-label,
+.binders-summary .stat-percent,
+.binders-summary .stat-divider {
+  color: var(--color-text-muted);
+}
+.binders-summary .stat-value {
+  color: var(--color-text);
+}
+.binders-summary .stat-card .progress-bar {
+  background: var(--progress-track);
+  height: 8px;
+  margin: 0.35rem 0 0.25rem;
+}
+
+/* "On the shelf" is a button that opens the shelf modal, so it has to read
+   as pressable while staying the same shape as the cards beside it. */
+.stat-card--action {
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  position: relative;
+  transition: border-color var(--transition-fast),
+    box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.binders-summary .stat-card--action {
+  border-color: var(--color-blue);
+}
+
+.stat-card--action:hover,
+.stat-card--action:focus-visible {
+  border-color: var(--color-blue);
+  box-shadow: 0 0 0 3px rgba(59, 76, 202, 0.18), var(--shadow-md);
+  transform: translateY(-1px);
+}
+
+.stat-card__cue {
+  color: var(--color-blue);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .stat-card__cue {
+  color: var(--color-yellow);
+}
+
+[data-theme="dark"] .binders-summary .stat-card--action {
+  border-color: var(--color-yellow-dark);
+}
+
+[data-theme="dark"] .stat-card--action:hover,
+[data-theme="dark"] .stat-card--action:focus-visible {
+  border-color: var(--color-yellow);
+  box-shadow: 0 0 0 3px rgba(255, 203, 5, 0.22), var(--shadow-md);
+}
+
+/* ---------- Sections ---------- */
+
+.binders-section {
+  margin-bottom: 2.25rem;
+}
+
+.binders-section__title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: 0.3rem;
+}
+
+.binders-section__note {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-width: 62ch;
+  margin-bottom: 1rem;
+}
+
+/* ---------- Binder cards ---------- */
+
+.binder-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.binder-group__title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text);
+  /* The divider the generation title sits on. */
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.binder-group__title::before {
+  content: "";
+  width: 4px;
+  height: 0.95rem;
+  border-radius: 2px;
+  background: var(--color-yellow);
+  flex: none;
+}
+
+.binder-group__count {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--color-text-muted);
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+.binder-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 0.85rem;
+  /* Without this, grid stretches every card in a row to the tallest one, so
+     expanding one card's set list inflates its neighbours' blank space. */
+  align-items: start;
+}
+
+.binder-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.binder-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.binder-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.binder-card__ident {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.binder-card__id {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--color-text);
+}
+
+/* The colour of the physical binder. Bigger than a bullet and lifted off the
+   card, because it is the one thing on the card that is not a number. */
+.binder-card__swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  flex: none;
+  box-shadow: 0 2px 5px rgba(15, 23, 42, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.18);
+}
+
+.binder-card__lock {
+  font-size: 0.8rem;
+  cursor: help;
+}
+
+.binder-card__status {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.binder-card__status.is-owned {
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--progress-complete);
+  border: 1px solid rgba(34, 197, 94, 0.35);
+}
+
+.binder-card__status.is-to-buy {
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+}
+
+.binder-card__meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Spells out what "pockets used" is made of: a binder you own no cards for
+   still reads 5/624, and the 5 are the divider cards. */
+.binder-card__breakdown {
+  font-size: 0.74rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  margin-top: -0.25rem;
+}
+
+.binder-card__breakdown.is-dividers-only {
+  font-style: italic;
+}
+
+.binder-card__figures {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.75rem;
+  margin: 0.1rem 0;
+}
+
+.binder-card__figures dt {
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.binder-card__figures dd {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Set list ---------- */
+
+.binder-card__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+  padding: 0.2rem 0;
+  align-self: flex-start;
+}
+
+.binder-card__toggle {
+  cursor: pointer;
+}
+
+.binder-card__toggle:hover {
+  color: var(--color-text);
+}
+
+.binder-card__chevron {
+  transition: transform var(--transition-fast);
+  display: inline-block;
+}
+
+.binder-card__toggle[aria-expanded="true"] .binder-card__chevron {
+  transform: rotate(180deg);
+}
+
+/* The list is column-flex only when open. Hanging display on :not([hidden])
+   rather than on the element means no ordering or specificity accident can
+   leave a collapsed list visible — the JS toggles the `hidden` attribute and
+   the layout follows it, instead of fighting the UA's [hidden] rule. */
+.binder-card__sets {
+  list-style: none;
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.5rem;
+  gap: 0.28rem;
+}
+
+.binder-card__sets:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+}
+
+.binder-set {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--color-text);
+}
+
+.binder-set__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.binder-set__count {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  flex: none;
+}
+
+.binder-set.is-complete .binder-set__count {
+  color: var(--progress-complete);
+  font-weight: 600;
+}
+
+/* ---------- Card actions ---------- */
+
+.binder-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding-top: 0.2rem;
+}
+
+/* Sized to match the .btn next to it — it is a peer control, not a footnote. */
+.binder-card__assign,
+.shelf-row__assign {
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.binder-card__assign:hover,
+.shelf-row__assign:hover {
+  border-color: var(--color-blue);
+}
+
+/* "In use" is meaningless for a binder with no plan slot, so the toggle is
+   disabled there rather than hidden — the state stays legible. */
+.binders-main .btn:disabled,
+.shelf-dialog .btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.binders-main .btn:disabled:hover,
+.shelf-dialog .btn:disabled:hover {
+  background: var(--color-surface-alt);
+}
+
+/* ---------- Shelf modal ----------
+   The shelf is the detail behind the "On the shelf" number, so it opens from
+   that card instead of sitting at the bottom of the page. This leaves the
+   plan — the part that gets shared — as the whole page. */
+
+.shelf-dialog {
+  width: min(640px, calc(100vw - 2rem));
+  max-height: min(86vh, 900px);
+  overflow: auto;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: var(--shadow-lg);
+  position: relative;
+}
+
+/* The Pokémon-red/yellow band that makes the modal read as its own place. */
+.shelf-dialog::before {
+  content: "";
+  position: sticky;
+  top: 0;
+  display: block;
+  height: 5px;
+  background: linear-gradient(
+    90deg,
+    var(--color-red) 0%,
+    var(--color-yellow) 50%,
+    var(--color-blue) 100%
+  );
+}
+
+.shelf-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.shelf-dialog__close-form {
+  position: absolute;
+  top: 0.9rem;
+  right: 0.9rem;
+  z-index: 1;
+}
+
+.shelf-dialog__close {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.shelf-dialog__close:hover {
+  background: var(--color-red);
+  border-color: var(--color-red);
+  color: #fff;
+}
+
+.shelf-dialog__head {
+  padding: 1.1rem 1.25rem 0.6rem;
+}
+
+.shelf-dialog__title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  padding-right: 2.5rem;
+}
+
+.shelf-dialog__title::after {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--color-yellow);
+  margin-top: 0.4rem;
+}
+
+.shelf-dialog__sub {
+  font-size: 0.82rem;
+  line-height: 1.55;
+  color: var(--color-text-muted);
+  margin-top: 0.55rem;
+  max-width: 56ch;
+}
+
+.shelf-dialog .shelf-form,
+.shelf-dialog .shelf-list {
+  margin: 0 1.25rem;
+}
+
+.shelf-dialog .shelf-list {
+  padding-bottom: 1.25rem;
+}
+
+/* ---------- Shelf ---------- */
+
+.shelf-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--color-yellow);
+  border-radius: var(--radius-md);
+  padding: 0.85rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.shelf-form__field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.shelf-form__field label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+}
+
+.shelf-form__color {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.shelf-form input[type="text"],
+.shelf-form select {
+  font-size: 0.9rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-alt);
+  color: var(--color-text);
+  width: 100%;
+  min-width: 0;
+}
+
+.shelf-form input[type="text"] {
+  min-width: 190px;
+}
+
+.shelf-form select {
+  min-width: 170px;
+}
+
+/* The live colour preview, and the swatch on each shelf row. */
+.shelf-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -2px 5px rgba(0, 0, 0, 0.16);
+}
+
+.shelf-swatch.is-unknown {
+  box-shadow: none;
+  /* Checkerboard reads as "no colour" without inventing one. */
+  background-image: linear-gradient(45deg, var(--color-border) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-border) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-border) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-border) 75%);
+  background-size: 8px 8px;
+  background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  color: var(--color-text-muted);
+}
+
+.shelf-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.shelf-empty {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  padding: 0.75rem 0;
+}
+
+.shelf-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.85rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.shelf-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.shelf-row__color {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--color-text);
+  text-transform: capitalize;
+}
+
+.shelf-row__size {
+  font-size: 0.76rem;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.shelf-row__assigned {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.shelf-row__assigned.is-assigned {
+  color: var(--progress-complete);
+}
+
+/* An off-plan purpose ("Promos") is a real job, so it is coloured — just not
+   the green of a filled plan slot. */
+.shelf-row__assigned.is-off-plan {
+  color: var(--progress-mid);
+}
+
+.shelf-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: flex-end;
+}
+
+/* ---------- Phone ---------- */
+
+@media (max-width: 640px) {
+  .binder-list {
+    grid-template-columns: 1fr;
+  }
+
+  .shelf-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .shelf-form input[type="text"],
+  .shelf-form select {
+    min-width: 0;
+  }
+
+  .shelf-dialog {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+  }
+
+  .shelf-dialog .shelf-form,
+  .shelf-dialog .shelf-list {
+    margin: 0 1rem;
+  }
+
+  .shelf-dialog__head {
+    padding: 1rem 1rem 0.5rem;
+  }
+
+  .shelf-row {
+    flex-wrap: wrap;
+  }
+
+  .shelf-row__actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .binder-card__figures {
+    grid-template-columns: 1fr 1fr;
+  }
+}

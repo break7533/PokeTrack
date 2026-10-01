@@ -60,6 +60,7 @@ const looksUnconfigured = Object.values(firebaseConfig).some(
 let app, auth, db, provider;
 let currentUser = null;
 let syncTimer = null;
+let shelfSyncTimer = null;
 
 if (!looksUnconfigured) {
   try {
@@ -96,6 +97,31 @@ window.syncCollectionToCloud = function (collection) {
     } catch (e) {
       console.warn(
         "PokéTrack: Firestore write failed (ad blocker / offline?). Local data is safe.",
+        e.message || e
+      );
+    }
+  }, 600);
+};
+
+/**
+ * Debounced write of the binder shelf — the physical binders the user owns.
+ * Called by js/binders-view.js after every shelf change.
+ *
+ * Stored as a sibling field of `collection` on the same user document, so it
+ * rides along on the one read at sign-in.
+ *
+ * @param {Array<object>} shelf
+ */
+window.syncShelfToCloud = function (shelf) {
+  if (!currentUser || !db) return;
+  if (shelfSyncTimer) clearTimeout(shelfSyncTimer);
+  shelfSyncTimer = setTimeout(async () => {
+    try {
+      const ref = doc(db, "users", currentUser.uid);
+      await setDoc(ref, { shelf: shelf }, { merge: true });
+    } catch (e) {
+      console.warn(
+        "PokéTrack: shelf write failed (ad blocker / offline?). Local data is safe.",
         e.message || e
       );
     }
@@ -232,17 +258,17 @@ window.loadDailyRecommendation = async function () {
 
 // ---------- Internals ----------
 
-async function loadFromCloud(uid) {
+/**
+ * Read the whole user document in one go. Returns the raw data object so a
+ * single read can serve every field on it (`collection`, `shelf`, …) rather
+ * than costing one read per feature.
+ */
+async function loadUserDoc(uid) {
   if (!db) return null;
   try {
     const ref = doc(db, "users", uid);
     const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const data = snap.data();
-      // Old (illustrator-checklist-style) docs may have stored fields at the
-      // top level; in this app we always nest under `collection`.
-      return data.collection || null;
-    }
+    if (snap.exists()) return snap.data() || null;
   } catch (e) {
     console.warn(
       "PokéTrack: Firestore read failed (ad blocker / offline?). Using local data.",
@@ -300,6 +326,42 @@ function mergeCollections(local, cloud) {
     if (secretAt) out[id].secretAt = secretAt;
   });
   return out;
+}
+
+/**
+ * Merge cloud + local shelves by binder uid, last-write-wins on `updatedAt`.
+ *
+ * Unlike the collection, a shelf entry can legitimately be deleted, and a
+ * union would resurrect it on the next sign-in. So a side that has clearly
+ * been touched more recently than the other's newest entry is trusted to have
+ * the authoritative list. Within the overlap, the newer entry wins.
+ *
+ * @param {Array<object>|null} local
+ * @param {Array<object>|null} cloud
+ */
+function mergeShelves(local, cloud) {
+  const localList = Array.isArray(local) ? local : [];
+  const cloudList = Array.isArray(cloud) ? cloud : [];
+
+  if (localList.length === 0) return cloudList;
+  if (cloudList.length === 0) return localList;
+
+  const newest = (list) =>
+    list.reduce((max, entry) => Math.max(max, entry.updatedAt || 0), 0);
+  const localNewest = newest(localList);
+  const cloudNewest = newest(cloudList);
+
+  // Whichever side changed last defines which binders exist; the other side
+  // only gets to contribute newer versions of binders that still exist.
+  const authoritative = localNewest >= cloudNewest ? localList : cloudList;
+  const other = localNewest >= cloudNewest ? cloudList : localList;
+  const otherByUid = new Map(other.map((entry) => [entry.uid, entry]));
+
+  return authoritative.map((entry) => {
+    const rival = otherByUid.get(entry.uid);
+    if (!rival) return entry;
+    return (rival.updatedAt || 0) > (entry.updatedAt || 0) ? rival : entry;
+  });
 }
 
 function renderAuthButton(user) {
@@ -402,7 +464,8 @@ if (auth) {
       return;
     }
 
-    const cloud = await loadFromCloud(user.uid);
+    const cloudDoc = await loadUserDoc(user.uid);
+    const cloud = (cloudDoc && cloudDoc.collection) || null;
     const local = window.getLocalCollection ? window.getLocalCollection() : null;
     const merged = mergeCollections(local, cloud);
 
@@ -412,6 +475,19 @@ if (auth) {
     // Push the merged result back up so cloud and local match after sign-in.
     if (typeof window.syncCollectionToCloud === "function") {
       window.syncCollectionToCloud(merged);
+    }
+
+    // Same dance for the binder shelf, on the pages that own one.
+    if (typeof window.applyCloudShelf === "function") {
+      const localShelf = window.getLocalShelf ? window.getLocalShelf() : [];
+      const mergedShelf = mergeShelves(
+        localShelf,
+        (cloudDoc && cloudDoc.shelf) || null
+      );
+      window.applyCloudShelf(mergedShelf);
+      if (typeof window.syncShelfToCloud === "function") {
+        window.syncShelfToCloud(mergedShelf);
+      }
     }
 
     // Auto-pull cloud history into local on sign-in (works on any page).

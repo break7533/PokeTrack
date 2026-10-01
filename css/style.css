@@ -403,6 +403,20 @@ button {
   border-color: #c81212;
 }
 
+/* Page title badge — shown next to the logo on sub-pages (Stats, Binders). */
+.site-title__page {
+  font-size: 0.7em;
+  font-weight: 600;
+  background: var(--color-yellow);
+  color: var(--color-blue-dark);
+  padding: 0.15em 0.5em;
+  border-radius: var(--radius-sm);
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
 .nav-link {
   text-decoration: none;
   font-size: 0.82rem;

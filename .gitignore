@@ -67,3 +67,10 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Personal planning notes — scratch working for the binder plan, kept locally.
+# The plan itself lives in js/binders.js; these were the thinking phase.
+BINDER-*.md
+
+# Local collection exports
+poketrack-export*.csv

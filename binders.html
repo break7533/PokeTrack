@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PokéTrack — Binder Plan</title>
+  <meta name="description" content="Which Pokémon TCG sets go in which binder, what size each one is, and how full it is." />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <!-- Open Graph / social sharing — this page is meant to be sent to people. -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="PokéTrack — Binder Plan" />
+  <meta property="og:description" content="25 binders, every English main-line set filed oldest to newest." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="PokéTrack — Binder Plan" />
+  <meta name="twitter:description" content="25 binders, every English main-line set filed oldest to newest." />
+  <meta name="color-scheme" content="dark light" />
+  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/binders.css" />
+  <script>
+    (function () {
+      try {
+        var saved = localStorage.getItem("poketrack:theme:v1");
+        if (saved !== "light") {
+          document.documentElement.setAttribute("data-theme", "dark");
+        }
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "dark");
+      }
+    })();
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <div class="site-header__top">
+        <h1 class="site-title">
+          <span class="logo-mark">⚡</span> PokéTrack
+          <span class="site-title__page">Binders</span>
+        </h1>
+
+        <div class="site-header__actions">
+          <a href="index.html" class="btn btn--ghost nav-link">
+            <span aria-hidden="true">←</span> Tracker
+          </a>
+          <a href="stats.html" class="btn btn--ghost nav-link">Stats</a>
+          <button
+            type="button"
+            id="theme-btn"
+            class="icon-btn"
+            aria-label="Toggle dark mode"
+            title="Toggle dark mode"
+          >
+            <span class="icon-btn__icon" aria-hidden="true">🌙</span>
+          </button>
+          <!--
+            Sign-in is optional here, as everywhere: without it the shelf is
+            saved in this browser only. firebase.js manages this button.
+          -->
+          <button
+            type="button"
+            id="auth-btn"
+            class="auth-btn"
+            aria-label="Sign in with Google"
+            title="Sign in with Google to sync across devices"
+          >
+            <span class="auth-btn__label">Sign in</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container binders-main">
+    <noscript>
+      <p class="error">PokéTrack requires JavaScript to run. Please enable JavaScript in your browser settings.</p>
+    </noscript>
+
+    <section class="binders-intro">
+      <p class="binders-intro__lead">
+        Every English main-line set, filed oldest to newest, one generation per
+        binder, no set split in two. This is the plan — <strong><span id="summary-binders">0</span> binders</strong>
+        in total.
+      </p>
+
+      <div class="binders-summary">
+        <!-- Doubles as the entry point to the shelf modal. -->
+        <button type="button" class="stat-card stat-card--action" id="shelf-open">
+          <div class="stat-label">On the shelf</div>
+          <div class="stat-value"><span id="summary-owned">0</span></div>
+          <div class="stat-percent">
+            owned <span class="stat-card__cue" aria-hidden="true">· manage →</span>
+          </div>
+        </button>
+        <div class="stat-card">
+          <div class="stat-label">Still to buy</div>
+          <div class="stat-value"><span id="summary-to-buy">0</span></div>
+          <div class="stat-percent">binders</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total pockets</div>
+          <div class="stat-value"><span id="summary-pockets">0</span></div>
+          <div class="stat-percent">across the plan</div>
+        </div>
+        <div class="stat-card stat-card--base">
+          <div class="stat-label">Cards filed</div>
+          <div class="stat-value">
+            <span id="summary-cards">0</span>
+            <span class="stat-divider">/</span>
+            <span id="summary-cards-total">0</span>
+          </div>
+          <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="progress-bar__fill" id="summary-bar" style="width:0%"></div>
+          </div>
+          <div class="stat-percent"><span id="summary-percent">0</span>%</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="binders-section" aria-label="Binders in buy order">
+      <h2 class="binders-section__title">Buy order</h2>
+      <p class="binders-section__note" id="order-note"></p>
+      <div id="binder-list" class="binder-groups">
+        <p class="loading">Loading binder plan…</p>
+      </div>
+    </section>
+
+    <dialog id="shelf-dialog" class="shelf-dialog" aria-labelledby="shelf-dialog-title">
+      <form method="dialog" class="shelf-dialog__close-form">
+        <button class="shelf-dialog__close" aria-label="Close">×</button>
+      </form>
+
+      <header class="shelf-dialog__head">
+        <h2 class="shelf-dialog__title" id="shelf-dialog-title">Your shelf</h2>
+        <p class="shelf-dialog__sub">
+          The binders you actually own. Give each one a colour, then assign it
+          to a slot in the plan — or to “Other”, for a binder you keep for
+          something the plan doesn’t cover, like promos or a master set.
+        </p>
+      </header>
+
+      <form id="shelf-form" class="shelf-form">
+        <div class="shelf-form__field">
+          <label for="shelf-color">Colour</label>
+          <div class="shelf-form__color">
+            <span id="shelf-color-preview" class="shelf-swatch is-unknown" aria-hidden="true"></span>
+            <input
+              type="text"
+              id="shelf-color"
+              name="color"
+              placeholder="dark grey, light blue, red…"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div class="shelf-form__field">
+          <label for="shelf-size">Size</label>
+          <!-- Purchasable sizes only. A binder kept for something the plan
+               doesn't cover is handled by assigning it to "Other", not by
+               inventing a pocket count. -->
+          <select id="shelf-size" name="size"></select>
+        </div>
+
+        <button type="submit" class="btn btn--primary">Add to shelf</button>
+      </form>
+
+      <div id="shelf-list" class="shelf-list"></div>
+    </dialog>
+
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>
+        Card counts based on
+        <a href="https://bulbapedia.bulbagarden.net/wiki/List_of_Pok%C3%A9mon_Trading_Card_Game_expansions" target="_blank" rel="noopener noreferrer">
+          Bulbapedia's expansion list
+        </a>.
+        Fill rates come from your own collection, saved in this browser.
+      </p>
+      <p class="footer-meta">PokéTrack is a fan-made tracker and is not affiliated with The Pokémon Company.</p>
+    </div>
+  </footer>
+
+  <template id="binder-card-template">
+    <article class="binder-card" data-binder-id="">
+      <div class="binder-card__head">
+        <div class="binder-card__ident">
+          <span class="binder-card__swatch" hidden></span>
+          <h3 class="binder-card__id"></h3>
+          <span class="binder-card__lock" hidden aria-label="Locked">🔒</span>
+        </div>
+        <span class="binder-card__status"></span>
+      </div>
+
+      <p class="binder-card__meta">
+        <span class="binder-card__era"></span>
+        <span class="binder-card__dot" aria-hidden="true">·</span>
+        <span class="binder-card__size"></span>
+      </p>
+
+      <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+        <div class="progress-bar__fill" style="width:0%"></div>
+      </div>
+
+      <p class="binder-card__breakdown"></p>
+
+      <dl class="binder-card__figures">
+        <div>
+          <dt>Pockets used</dt>
+          <dd><span class="binder-card__filled">0</span> / <span class="binder-card__capacity">0</span></dd>
+        </div>
+        <div>
+          <dt>Fill rate</dt>
+          <dd class="binder-card__percent">0%</dd>
+        </div>
+        <div>
+          <dt>Still to collect</dt>
+          <dd class="binder-card__remaining">0</dd>
+        </div>
+        <div>
+          <dt>Empty when done</dt>
+          <dd class="binder-card__empty">0</dd>
+        </div>
+      </dl>
+
+      <button type="button" class="binder-card__toggle" aria-expanded="false">
+        <span class="binder-card__chevron" aria-hidden="true">▾</span>
+        <span class="binder-card__toggle-count"></span>
+      </button>
+      <ul class="binder-card__sets" hidden></ul>
+
+      <div class="binder-card__actions"></div>
+    </article>
+  </template>
+
+  <template id="shelf-row-template">
+    <div class="shelf-row">
+      <span class="shelf-swatch shelf-row__swatch" aria-hidden="true"></span>
+      <div class="shelf-row__info">
+        <span class="shelf-row__color"></span>
+        <span class="shelf-row__size"></span>
+        <span class="shelf-row__assigned"></span>
+      </div>
+      <div class="shelf-row__actions"></div>
+    </div>
+  </template>
+
+  <!-- Set data (same as the other pages) -->
+  <script src="js/sets/_config.js"></script>
+  <script src="js/sets/mega-evolution.js"></script>
+  <script src="js/sets/scarlet-violet.js"></script>
+  <script src="js/sets/sword-shield.js"></script>
+  <script src="js/sets/sun-moon.js"></script>
+  <script src="js/sets/xy.js"></script>
+  <script src="js/sets/black-white.js"></script>
+  <script src="js/sets/hgss.js"></script>
+  <script src="js/sets/platinum.js"></script>
+  <script src="js/sets/diamond-pearl.js"></script>
+  <script src="js/sets/ex.js"></script>
+  <script src="js/sets/e-card.js"></script>
+  <script src="js/sets/legendary-collection.js"></script>
+  <script src="js/sets/neo.js"></script>
+  <script src="js/sets/original-series.js"></script>
+  <script src="js/sets/other.js"></script>
+  <script src="js/sets/_index.js"></script>
+
+  <!-- The frozen binder allocation -->
+  <script src="js/binders.js"></script>
+
+  <!-- Page logic. Must come before firebase.js so the window.* shelf hooks
+       exist by the time onAuthStateChanged fires. -->
+  <script src="js/binders-view.js"></script>
+  <script type="module" src="firebase.js"></script>
+</body>
+</html>
