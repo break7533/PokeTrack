@@ -91,11 +91,14 @@
             owned <span class="stat-card__cue" aria-hidden="true">· manage →</span>
           </div>
         </button>
-        <div class="stat-card">
+        <!-- Opens the ranked buy order: which binder to buy next. -->
+        <button type="button" class="stat-card stat-card--action" id="buy-open">
           <div class="stat-label">Still to buy</div>
           <div class="stat-value"><span id="summary-to-buy">0</span></div>
-          <div class="stat-percent">binders</div>
-        </div>
+          <div class="stat-percent">
+            binders <span class="stat-card__cue" aria-hidden="true">· what first →</span>
+          </div>
+        </button>
         <div class="stat-card">
           <div class="stat-label">Total pockets</div>
           <div class="stat-value"><span id="summary-pockets">0</span></div>
@@ -124,14 +127,14 @@
       </div>
     </section>
 
-    <dialog id="shelf-dialog" class="shelf-dialog" aria-labelledby="shelf-dialog-title">
-      <form method="dialog" class="shelf-dialog__close-form">
-        <button class="shelf-dialog__close" aria-label="Close">×</button>
+    <dialog id="shelf-dialog" class="pt-dialog shelf-dialog" aria-labelledby="shelf-dialog-title">
+      <form method="dialog" class="pt-dialog__close-form">
+        <button class="pt-dialog__close" aria-label="Close">×</button>
       </form>
 
-      <header class="shelf-dialog__head">
-        <h2 class="shelf-dialog__title" id="shelf-dialog-title">Your shelf</h2>
-        <p class="shelf-dialog__sub">
+      <header class="pt-dialog__head">
+        <h2 class="pt-dialog__title" id="shelf-dialog-title">Your shelf</h2>
+        <p class="pt-dialog__sub">
           The binders you actually own. Give each one a colour, then assign it
           to a slot in the plan — or to “Other”, for a binder you keep for
           something the plan doesn’t cover, like promos or a master set.
@@ -165,6 +168,24 @@
       </form>
 
       <div id="shelf-list" class="shelf-list"></div>
+    </dialog>
+
+    <!--
+      The page groups binders by generation so it reads well. This is the
+      other question — "which one do I buy next?" — answered as one flat
+      ranking across every generation, fullest first.
+    -->
+    <dialog id="buy-dialog" class="pt-dialog buy-dialog" aria-labelledby="buy-dialog-title">
+      <form method="dialog" class="pt-dialog__close-form">
+        <button class="pt-dialog__close" aria-label="Close">×</button>
+      </form>
+
+      <header class="pt-dialog__head">
+        <h2 class="pt-dialog__title" id="buy-dialog-title">Buy this next</h2>
+        <p class="pt-dialog__sub" id="buy-note"></p>
+      </header>
+
+      <ol id="buy-list" class="buy-list"></ol>
     </dialog>
 
   </main>

@@ -423,22 +423,26 @@
 /* "In use" is meaningless for a binder with no plan slot, so the toggle is
    disabled there rather than hidden — the state stays legible. */
 .binders-main .btn:disabled,
-.shelf-dialog .btn:disabled {
+.pt-dialog .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
 
 .binders-main .btn:disabled:hover,
-.shelf-dialog .btn:disabled:hover {
+.pt-dialog .btn:disabled:hover {
   background: var(--color-surface-alt);
 }
 
-/* ---------- Shelf modal ----------
-   The shelf is the detail behind the "On the shelf" number, so it opens from
-   that card instead of sitting at the bottom of the page. This leaves the
-   plan — the part that gets shared — as the whole page. */
+/* ---------- Modals ----------
+   Both modals hold the detail behind a number in the summary row: the shelf
+   behind "On the shelf", the ranked buy order behind "Still to buy". Opening
+   them from the card they explain leaves the plan — the part that gets
+   shared — as the whole page.
 
-.shelf-dialog {
+   .pt-dialog is the shared shell. .pt-dialog and .buy-dialog add only
+   their own contents. */
+
+.pt-dialog {
   width: min(640px, calc(100vw - 2rem));
   max-height: min(86vh, 900px);
   overflow: auto;
@@ -452,7 +456,7 @@
 }
 
 /* The Pokémon-red/yellow band that makes the modal read as its own place. */
-.shelf-dialog::before {
+.pt-dialog::before {
   content: "";
   position: sticky;
   top: 0;
@@ -466,19 +470,19 @@
   );
 }
 
-.shelf-dialog::backdrop {
+.pt-dialog::backdrop {
   background: rgba(15, 23, 42, 0.62);
   backdrop-filter: blur(3px);
 }
 
-.shelf-dialog__close-form {
+.pt-dialog__close-form {
   position: absolute;
   top: 0.9rem;
   right: 0.9rem;
   z-index: 1;
 }
 
-.shelf-dialog__close {
+.pt-dialog__close {
   width: 30px;
   height: 30px;
   border-radius: 999px;
@@ -490,24 +494,24 @@
   cursor: pointer;
 }
 
-.shelf-dialog__close:hover {
+.pt-dialog__close:hover {
   background: var(--color-red);
   border-color: var(--color-red);
   color: #fff;
 }
 
-.shelf-dialog__head {
+.pt-dialog__head {
   padding: 1.1rem 1.25rem 0.6rem;
 }
 
-.shelf-dialog__title {
+.pt-dialog__title {
   font-size: 1.2rem;
   font-weight: 800;
   color: var(--color-text);
   padding-right: 2.5rem;
 }
 
-.shelf-dialog__title::after {
+.pt-dialog__title::after {
   content: "";
   display: block;
   width: 44px;
@@ -517,7 +521,7 @@
   margin-top: 0.4rem;
 }
 
-.shelf-dialog__sub {
+.pt-dialog__sub {
   font-size: 0.82rem;
   line-height: 1.55;
   color: var(--color-text-muted);
@@ -525,13 +529,98 @@
   max-width: 56ch;
 }
 
-.shelf-dialog .shelf-form,
-.shelf-dialog .shelf-list {
+.pt-dialog .shelf-form,
+.pt-dialog .shelf-list {
   margin: 0 1.25rem;
 }
 
-.shelf-dialog .shelf-list {
+.pt-dialog .shelf-list {
   padding-bottom: 1.25rem;
+}
+
+/* ---------- Ranked buy order ---------- */
+
+.buy-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0 1.25rem 1.25rem;
+}
+
+.buy-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.6rem 0.8rem;
+}
+
+/* The top three are the ones worth acting on, so they get the accent. */
+.buy-row:nth-child(-n + 3) {
+  border-left: 3px solid var(--color-yellow);
+}
+
+.buy-row__rank {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 1.4rem;
+  text-align: right;
+  flex: none;
+}
+
+.buy-row:nth-child(-n + 3) .buy-row__rank {
+  color: var(--color-yellow);
+}
+
+.buy-row__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.buy-row__id {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.buy-row__meta {
+  font-size: 0.72rem;
+  color: var(--color-text-muted);
+}
+
+.buy-row .progress-bar {
+  height: 6px;
+  margin-top: 0.1rem;
+}
+
+.buy-row__figure {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.1rem;
+  flex: none;
+}
+
+.buy-row__percent {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.buy-row__have {
+  font-size: 0.68rem;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Shelf ---------- */
@@ -703,7 +792,7 @@
     min-width: 0;
   }
 
-  .shelf-dialog {
+  .pt-dialog {
     width: 100vw;
     max-width: 100vw;
     max-height: 100vh;
@@ -711,12 +800,16 @@
     border-radius: 0;
   }
 
-  .shelf-dialog .shelf-form,
-  .shelf-dialog .shelf-list {
+  .pt-dialog .shelf-form,
+  .pt-dialog .shelf-list {
     margin: 0 1rem;
   }
 
-  .shelf-dialog__head {
+  .buy-list {
+    margin: 0 1rem 1rem;
+  }
+
+  .pt-dialog__head {
     padding: 1rem 1rem 0.5rem;
   }
 

@@ -968,6 +968,31 @@ html.show-secrets .set:not(.set--no-secret) .set__row--secret {
     padding: 0.7rem 0 0.75rem;
   }
 
+  /*
+    Let the header wrap instead of overflowing. .site-header__actions is
+    `flex: 0 0 auto` by default, so on a page with a long title AND four
+    actions (binders.html: the "Binders" page chip plus Tracker / Stats /
+    theme / sign-in) the row ran past the container and clipped the last
+    button. Wrapping costs a second line only on the pages that need it,
+    and every page sets --site-header-height from a ResizeObserver, so
+    body padding follows the taller header automatically.
+  */
+  .site-header__top {
+    flex-wrap: wrap;
+  }
+
+  .site-header__actions {
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    min-width: 0;
+    gap: 0.4rem;
+  }
+
+  .nav-link {
+    padding: 0.4rem 0.6rem;
+  }
+
   .header-toggle {
     display: inline-flex;
   }

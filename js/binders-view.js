@@ -234,6 +234,7 @@
     if (!booted) return;
     renderSummary();
     renderPlan();
+    renderBuyOrder();
     renderShelf();
   }
 
@@ -526,6 +527,97 @@
     return name === "" ? null : name;
   }
 
+  // ---------- Rendering: ranked buy order ----------
+
+  /**
+   * The page groups binders by generation, which answers "where does this set
+   * go". This answers the other question — "which binder do I buy next" — as
+   * one flat ranking across every generation.
+   *
+   * Fullest first: the binder you have the most cards for is the one sitting
+   * in a box right now, so it earns its shelf space soonest. Only binders
+   * with no physical binder assigned appear; the rest are already bought.
+   */
+  function renderBuyOrder() {
+    const container = document.getElementById("buy-list");
+    if (!container) return;
+
+    const toBuy = POKETRACK_BINDERS.map(describeBinder)
+      .filter((d) => !d.shelfBinder)
+      .sort((a, b) => b.fill - a.fill || b.owned - a.owned);
+
+    const note = document.getElementById("buy-note");
+    const hasCollection = toBuy.some((d) => d.owned > 0);
+    if (note) {
+      if (toBuy.length === 0) {
+        note.textContent =
+          "Every binder in the plan has a binder on your shelf assigned to it. Nothing left to buy.";
+      } else if (hasCollection) {
+        note.textContent =
+          "Fullest first — the binder you already have the most cards for earns its shelf space soonest.";
+      } else {
+        note.textContent =
+          "No collection data yet, so there is nothing to rank by. Track cards on the Tracker page and this becomes a real priority order.";
+      }
+    }
+
+    container.innerHTML = "";
+
+    toBuy.forEach((d, index) => {
+      const row = document.createElement("li");
+      row.className = "buy-row";
+
+      const rank = document.createElement("span");
+      rank.className = "buy-row__rank";
+      rank.textContent = String(index + 1);
+
+      const info = document.createElement("div");
+      info.className = "buy-row__info";
+
+      const title = document.createElement("span");
+      title.className = "buy-row__id";
+      title.textContent = d.binder.id;
+
+      const meta = document.createElement("span");
+      meta.className = "buy-row__meta";
+      meta.textContent =
+        (eraNames.get(d.binder.era) || d.binder.era) +
+        " · " +
+        d.binder.size.toLocaleString() +
+        " pockets · " +
+        d.sets.length +
+        (d.sets.length === 1 ? " set" : " sets");
+
+      const bar = document.createElement("div");
+      bar.className = "progress-bar";
+      const percent = Math.round(d.fill);
+      const fill = document.createElement("div");
+      fill.className = "progress-bar__fill " + progressClass(percent);
+      fill.style.width = Math.min(percent, 100) + "%";
+      bar.appendChild(fill);
+
+      info.appendChild(title);
+      info.appendChild(meta);
+      info.appendChild(bar);
+
+      const figure = document.createElement("div");
+      figure.className = "buy-row__figure";
+      const pct = document.createElement("span");
+      pct.className = "buy-row__percent";
+      pct.textContent = percent + "%";
+      const have = document.createElement("span");
+      have.className = "buy-row__have";
+      have.textContent = d.owned.toLocaleString() + " cards ready";
+      figure.appendChild(pct);
+      figure.appendChild(have);
+
+      row.appendChild(rank);
+      row.appendChild(info);
+      row.appendChild(figure);
+      container.appendChild(row);
+    });
+  }
+
   // ---------- Rendering: shelf ----------
 
   function renderShelf() {
@@ -790,13 +882,13 @@
   // ---------- Shelf modal ----------
 
   /**
-   * The shelf lives behind the "On the shelf" stat card: it is the detail
-   * behind that number, and keeping it out of the page leaves the plan — the
-   * part meant to be shared — as the whole page.
+   * Each modal hangs off the summary card whose number it explains — the
+   * shelf behind "On the shelf", the ranked buy order behind "Still to buy" —
+   * so the page itself stays just the plan.
    */
-  function bindShelfDialog() {
-    const dialog = document.getElementById("shelf-dialog");
-    const opener = document.getElementById("shelf-open");
+  function bindDialog(openerId, dialogId) {
+    const dialog = document.getElementById(dialogId);
+    const opener = document.getElementById(openerId);
     if (!dialog || !opener) return;
 
     opener.addEventListener("click", () => {
@@ -927,7 +1019,8 @@
     setupHeaderHeightVar();
     bindThemeToggle();
     bindShelfForm();
-    bindShelfDialog();
+    bindDialog("shelf-open", "shelf-dialog");
+    bindDialog("buy-open", "buy-dialog");
     render();
   });
 })();
