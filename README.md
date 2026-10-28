@@ -154,6 +154,11 @@ service cloud.firestore {
 If `firebase.js` isn't configured (or fails to load), the auth button is
 hidden and the app stays 100% local.
 
+The AI-powered Daily Insight feature has been removed. Sign-in and cloud sync
+still work on Firebase's Spark plan within its quotas, without Cloud Functions
+or Cloud Scheduler. Previously stored recommendations are left untouched but
+are no longer loaded or displayed.
+
 ---
 
 ## 💾 How data is stored

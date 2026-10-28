@@ -36,8 +36,8 @@ const {
 
 // ---------- Load set data ----------
 
-// Same approach as functions/generate-sets-data.js: the set files are plain
-// scripts that push onto a shared array, so concatenate and evaluate them.
+// The set files are plain scripts that push onto a shared array, so
+// concatenate and evaluate them.
 const SET_FILES = [
   "_config.js",
   "mega-evolution.js",
